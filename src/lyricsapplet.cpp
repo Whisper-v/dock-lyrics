@@ -395,12 +395,18 @@ void LyricsApplet::onPlayerProperties(const QString &service, const QVariantMap 
             st.status = changed.value(QStringLiteral("PlaybackStatus")).toString();
         if (changed.contains(QStringLiteral("Position"))) {
             const qint64 us = changed.value(QStringLiteral("Position")).toLongLong();
-            st.positionUs = us;
-            if (m_activeService == service) {
-                m_basePositionUs = us;
-                m_clock.restart();
-                m_positionMs = us / 1000;
-                emit positionChanged();
+            // Some players announce a seek by updating Position via
+            // PropertiesChanged instead of (or in addition to) the MPRIS
+            // Seeked signal.  Treat a real change as a jump so the shown
+            // line is recomputed immediately -- also while paused -- and our
+            // internal clock is rebased onto the player's truth.  A duplicate
+            // report of the same value (Seeked followed by Position, or a
+            // periodic refresh) is a no-op.
+            if (us >= 0 && us != st.positionUs) {
+                if (m_activeService == service)
+                    jumpToPosition(us);
+                else
+                    st.positionUs = us;
             }
         }
         st.lastSeen = QDateTime::currentMSecsSinceEpoch();

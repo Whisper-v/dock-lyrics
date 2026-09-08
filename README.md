@@ -150,7 +150,9 @@ lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种�
 - 通过 D-Bus 监听 `NameOwnerChanged`（播放器注册/退出）与 `PropertiesChanged`（`PlaybackStatus`、`Metadata`、`Position`）。
 - 对**活动播放器**主动 `GetAll` 拉取一次完整元数据；Chromium 内核播放器上报的页面地址（如 `index.html#/like`）会被识别为垃圾标题并过滤，避免误取歌词。
 - 播放进度优先用播放器上报的 `Position`；播放器不上报位置（如 QQ 音乐网页版 `CanSeek=false`）时，用内部时钟自 0 累计同步。
-- **拖动进度条（seek）**：监听 MPRIS `Seeked` 信号，收到新位置后立即重置内部时钟并刷新当前歌词行——播放中、暂停时拖动都即时同步。
+- **拖动进度条（seek）**：同时处理两种 seek 通告——规范播放器发 `Seeked` 信号，部分播放器只通过 `PropertiesChanged` 更新 `Position`；两者都会立即重置内部时钟并刷新当前歌词行，播放中、暂停时都即时同步。
+  ⚠️ **Chromium 内核播放器（如 QQ 音乐桌面版）不属此类**：其 MPRIS 恒报 `CanSeek=false`、`Position=0`，既不发 `Seeked` 也不更新 `Position`，
+  插件无法感知其**应用内**拖动进度条（上游 MPRIS 能力限制，见下方 FAQ）。
 
 ### 架构简图
 
@@ -201,8 +203,10 @@ docs/                    截图与文档
 **歌词与歌对不上 / 显示的是页面地址？**
 Chromium 内核播放器偶尔会把页面标题当媒体标题上报，插件已内置垃圾标题过滤。可尝试在播放器内重新播放一次该曲目。
 
-**进度一直从 0 开始？**
-部分播放器（如 Chromium 网页媒体）不上报 `Position` 且禁止 seek，插件只能按内部时钟从 0 累计，此为播放器 MPRIS 能力限制。
+**进度一直从 0 开始 / 拖 QQ 音乐进度条歌词不同步？**
+部分播放器（如 Chromium 内核的 QQ 音乐桌面版）不上报 `Position`（恒为 0）、`CanSeek=false`，也不发 `Seeked`，插件只能按内部时钟从 0 累计，
+无法跟随其在**应用内**拖动进度条——这是播放器侧 MPRIS 能力限制，任何 MPRIS 客户端都拿不到它的真实进度。
+规范 MPRIS 播放器（Deepin 音乐、VLC、foobar2000、mpris 桥等）发 `Seeked` 或更新 `Position`，均可实时同步拖动。
 
 **在线歌词需要联网吗？**
 仅“在线歌词”需要：请保证可访问 `music.163.com` 与 `lrclib.net`。本地 `.lrc` 完全离线可用。

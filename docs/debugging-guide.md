@@ -171,11 +171,18 @@ dbus-send --session --print-reply --dest=<BUS> /org/mpris/MediaPlayer2 \
 ### D. 拖进度条歌词不同步 —— L2（历史 Bug）
 
 - 现象：歌词行不跟随进度条跳动。
-- 根因：只监听了 `PropertiesChanged`，没监听 `Seeked` 信号。
-- 现修复：`playerprobe` 订阅 `Seeked`（带 owner 校验），`lyricsapplet` 收到后
-  `jumpToPosition` 重置内部时钟并立刻重算当前行，暂停中拖动也生效。
-- 排查新播放器时：`dbus-monitor` 里拖进度条看是否发 `Seeked`。**规范播放器必发**；
-  若某播放器不发 `Seeked` 也不发 `Position`，则只能靠内部时钟估算（精度有限，见 §7 已知边界）。
+- 根因：只监听了 `PropertiesChanged`，没监听 `Seeked` 信号；且即使 `PropertiesChanged`
+  携带 `Position` 新值，旧逻辑也只重置时钟、**没有立刻重算当前行**（暂停时无定时器，
+  行会一直停在旧句）。
+- 现修复（两道通道都覆盖）：
+  1. `playerprobe` 订阅 `Seeked`（带 owner 校验），`lyricsapplet` 收到后
+     `jumpToPosition` 重置内部时钟并立刻重算当前行；
+  2. `PropertiesChanged` 里 `Position` 发生变化时同样走 `jumpToPosition`
+     （按新值去重），不再只是改数值——播放中、暂停时都能即时跳到正确行。
+- 排查新播放器时：`dbus-monitor` 里拖进度条看它到底发什么——规范播放器发 `Seeked`；
+  部分播放器只更新 `Position`（两种都已支持）；**若 `Seeked` 和 `Position` 都不发**
+  （Chromium 内核播放器 `CanSeek=false`、`Position` 恒 0），则只能靠内部时钟估算，
+  无法跟随应用内拖动（见 §7 已知边界）。
 
 ### E. 显示的是页面地址 / `index.html#/xxx` —— L2（历史 Bug）
 
