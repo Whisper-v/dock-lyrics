@@ -73,7 +73,16 @@ QString LyricsFetcher::findLocalLrc(const QString &title, const QString &artist,
     dirs << home + QStringLiteral("/Music")
          << home + QStringLiteral("/音乐")
          << home + QStringLiteral("/Music/Lyrics")
-         << home + QStringLiteral("/音乐/歌词");
+         << home + QStringLiteral("/音乐/歌词")
+         // common download folders used by Chinese players
+         << home + QStringLiteral("/Music/QQMusic")
+         << home + QStringLiteral("/Music/QQ音乐")
+         << home + QStringLiteral("/Music/qqmusic")
+         << home + QStringLiteral("/Music/网易云音乐")
+         << home + QStringLiteral("/Music/CloudMusic")
+         << home + QStringLiteral("/Music/酷狗音乐")
+         << home + QStringLiteral("/音乐/QQ音乐")
+         << home + QStringLiteral("/音乐/网易云音乐");
 
     const QString primaryArtist = artist.split(QRegularExpression("[/、&,]"), Qt::SkipEmptyParts)
                                       .value(0).trimmed();

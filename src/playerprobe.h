@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 class QDBusMessage;
@@ -21,6 +22,8 @@ Q_SIGNALS:
     void playerPropertiesChanged(const QString &service, const QVariantMap &changedProperties);
     // A seek happened (MPRIS Seeked signal): positionUs is the new position.
     void playerSeeked(const QString &service, qint64 positionUs);
+    // Properties were invalidated instead of being sent in the a{sv} map.
+    void playerPropertiesInvalidated(const QString &service, const QStringList &invalidatedKeys);
 
 private Q_SLOTS:
     // Receives the raw QDBusMessage: Qt cannot reliably demarshal the a{sv}

@@ -72,6 +72,7 @@ protected Q_SLOTS:
 private:
     void onPlayerProperties(const QString &service, const QVariantMap &changedProperties);
     void onPlayerSeeked(const QString &service, qint64 positionUs);
+    void onPlayerInvalidated(const QString &service, const QStringList &invalidatedKeys);
     struct PlayerState {
         QString status;   // Playing / Paused / Stopped
         QVariantMap metadata;

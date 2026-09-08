@@ -46,9 +46,13 @@ void PlayerProbe::onPropertiesChanged(const QDBusMessage &msg)
     if (interfaceName != QStringLiteral("org.mpris.MediaPlayer2.Player"))
         return;
     const QVariantMap changed = qdbusVariantToMap(args.value(1));
-    if (changed.isEmpty())
-        return;
-    emit playerPropertiesChanged(m_service, changed);
+    if (!changed.isEmpty())
+        emit playerPropertiesChanged(m_service, changed);
+    if (args.size() >= 3) {
+        const QStringList invalidated = args.value(2).toStringList();
+        if (!invalidated.isEmpty())
+            emit playerPropertiesInvalidated(m_service, invalidated);
+    }
 }
 
 void PlayerProbe::onSeeked(const QDBusMessage &msg)

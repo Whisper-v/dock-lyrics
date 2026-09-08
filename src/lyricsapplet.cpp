@@ -132,6 +132,8 @@ bool LyricsApplet::addPlayer(const QString &service)
             this, &LyricsApplet::onPlayerProperties);
     connect(probe, &PlayerProbe::playerSeeked,
             this, &LyricsApplet::onPlayerSeeked);
+    connect(probe, &PlayerProbe::playerPropertiesInvalidated,
+            this, &LyricsApplet::onPlayerInvalidated);
 
     readPlayerState(service);
     chooseActivePlayer();
@@ -225,24 +227,46 @@ void LyricsApplet::onPlayerProperties(const QString &service, const QVariantMap 
     if (!m_players.contains(service))
         return;
     PlayerState &st = m_players[service];
-    if (changed.contains(QStringLiteral("PlaybackStatus")))
-        st.status = changed.value(QStringLiteral("PlaybackStatus")).toString();
-    if (changed.contains(QStringLiteral("Metadata")))
-        st.metadata = changed.value(QStringLiteral("Metadata")).toMap();
-    if (changed.contains(QStringLiteral("Position"))) {
-        const qint64 us = changed.value(QStringLiteral("Position")).toLongLong();
-        st.positionUs = us;
-        if (m_activeService == service) {
-            m_basePositionUs = us;
-            m_clock.restart();
-            m_positionMs = us / 1000;
-            emit positionChanged();
+
+    if (changed.contains(QStringLiteral("Metadata"))) {
+        // Track change (or metadata refresh).  The nested a{sv} Metadata value
+        // inside PropertiesChanged is not reliably decodable by Qt (it often
+        // arrives as an opaque QDBusArgument), and players usually reset
+        // Position on a new track too.  A full GetAll gives us a clean,
+        // complete snapshot in one go.
+        readPlayerState(service);
+    } else {
+        if (changed.contains(QStringLiteral("PlaybackStatus")))
+            st.status = changed.value(QStringLiteral("PlaybackStatus")).toString();
+        if (changed.contains(QStringLiteral("Position"))) {
+            const qint64 us = changed.value(QStringLiteral("Position")).toLongLong();
+            st.positionUs = us;
+            if (m_activeService == service) {
+                m_basePositionUs = us;
+                m_clock.restart();
+                m_positionMs = us / 1000;
+                emit positionChanged();
+            }
         }
+        st.lastSeen = QDateTime::currentMSecsSinceEpoch();
     }
-    st.lastSeen = QDateTime::currentMSecsSinceEpoch();
 
     chooseActivePlayer();
     applyActivePlayer();
+}
+
+void LyricsApplet::onPlayerInvalidated(const QString &service, const QStringList &invalidatedKeys)
+{
+    if (!m_players.contains(service))
+        return;
+    // Some players (rare) drop Metadata/PlaybackStatus from the change map and
+    // list them in the invalidated array instead.  Re-read the whole state.
+    if (invalidatedKeys.contains(QStringLiteral("Metadata"))
+        || invalidatedKeys.contains(QStringLiteral("PlaybackStatus"))) {
+        readPlayerState(service);
+        chooseActivePlayer();
+        applyActivePlayer();
+    }
 }
 
 void LyricsApplet::chooseActivePlayer()
