@@ -35,6 +35,8 @@ class LyricsApplet : public DApplet
     Q_PROPERTY(QStringList colorThemeNames READ colorThemeNames CONSTANT)
     Q_PROPERTY(QStringList colorThemeColors READ colorThemeColors CONSTANT)
     Q_PROPERTY(QStringList colorThemeBgColors READ colorThemeBgColors CONSTANT)
+    Q_PROPERTY(QString customTextColor READ customTextColor WRITE setCustomTextColor NOTIFY customColorChanged)
+    Q_PROPERTY(QString customBgColor READ customBgColor WRITE setCustomBgColor NOTIFY customColorChanged)
     Q_PROPERTY(QString lyricSource READ lyricSource NOTIFY lyricsChanged)
 
 public:
@@ -62,6 +64,10 @@ public:
     QStringList colorThemeNames() const;
     QStringList colorThemeColors() const;
     QStringList colorThemeBgColors() const;
+    QString customTextColor() const { return m_customTextColor; }
+    void setCustomTextColor(const QString &color);
+    QString customBgColor() const { return m_customBgColor; }
+    void setCustomBgColor(const QString &color);
     QString lyricSource() const { return m_lyricSource; }
 
     Q_INVOKABLE void playPause();
@@ -77,6 +83,7 @@ Q_SIGNALS:
     void lyricsChanged();
     void stateTextChanged();
     void colorThemeChanged();
+    void customColorChanged();
 
 protected Q_SLOTS:
     void onNameOwnerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
@@ -131,6 +138,8 @@ private:
     QString m_stateText;
     QString m_lyricSource;
     int m_colorTheme = 0;
+    QString m_customTextColor;
+    QString m_customBgColor;
 
     QString m_lyricKey;                // song key the current lyrics belong to
     QHash<QString, QString> m_lyricCache;

@@ -24,18 +24,31 @@ AppletItem {
     /* ---------- colour themes ---------- */
     property D.Palette iconTextPalette: DockPalette.iconTextPalette
     property D.Palette textPalette: DockPalette.iconTextPalette
-    readonly property bool customTheme: Applet.colorTheme > 0
+    readonly property int customPaletteIndex: Applet.colorThemeNames.length - 1   // 11 == 自定义配色
+    readonly property bool vividTheme: Applet.colorTheme > 0 && Applet.colorTheme < customPaletteIndex
+    readonly property bool customPalette: Applet.colorTheme === customPaletteIndex
+    readonly property bool customFontSet: customPalette && Applet.customTextColor.length > 0
+    readonly property bool customBgSet: customPalette && Applet.customBgColor.length > 0
     readonly property color themeColorValue: Applet.colorThemeColors.length > 0
         ? Applet.colorThemeColors[Math.min(Applet.colorTheme, Applet.colorThemeColors.length - 1)]
         : "#FFFFFF"
-    // dark themes additionally bring their own pill background (empty == keep system behaviour)
+    // preset dark themes carry their own pill background (empty == keep system behaviour)
     readonly property string themeBgValue: Applet.colorThemeBgColors.length > 0
         ? Applet.colorThemeBgColors[Math.min(Applet.colorTheme, Applet.colorThemeBgColors.length - 1)]
         : ""
-    readonly property bool customBg: themeBgValue.length > 0
-    // 0 == follow the system palette; otherwise use the user-picked accent
-    readonly property color lyricColor: customTheme ? themeColorValue : D.ColorSelector.textPalette
-    readonly property color eqColor: customTheme ? themeColorValue : D.ColorSelector.iconTextPalette
+    readonly property bool presetDarkBg: themeBgValue.length > 0
+    readonly property bool showPill: presetDarkBg || customBgSet
+    readonly property color pillColor: presetDarkBg ? themeBgValue
+                                                    : (customBgSet ? Applet.customBgColor : "transparent")
+    // lyric / eq colour resolution:
+    //  - 自定义配色 with its own font colour wins; otherwise a dark pill gets soft white text
+    //  - preset vivid themes use their accent; 0 == follow the system palette
+    readonly property color lyricColor: customFontSet ? Applet.customTextColor
+        : (vividTheme ? themeColorValue
+           : (customBgSet ? "#E6EBF7" : D.ColorSelector.textPalette))
+    readonly property color eqColor: customFontSet ? Applet.customTextColor
+        : (vividTheme ? themeColorValue
+           : (customBgSet ? "#E6EBF7" : D.ColorSelector.iconTextPalette))
 
     /* ---------- metrics ---------- */
     readonly property int dockSize: Panel.rootObject.dockSize
@@ -175,8 +188,8 @@ AppletItem {
         radius: Math.round(root.dockSize * 0.16)
         property D.Palette bgPalette: DockPalette.backgroundPalette
         property bool bgHovered: false
-        // dark themes keep their pill always visible; vivid themes only show it while hovered
-        color: root.customBg ? root.themeBgValue
+        // dark themes / custom pill colours keep the pill always visible; others only while hovered
+        color: root.showPill ? root.pillColor
                              : (bgHovered ? D.ColorSelector.bgPalette : "transparent")
         HoverHandler {
             id: pillHover
@@ -301,9 +314,9 @@ AppletItem {
         visible: root.verticalDock
         Rectangle {
             anchors.fill: parent
-            visible: root.customBg
+            visible: root.showPill
             radius: Math.round(root.dockSize * 0.16)
-            color: root.themeBgValue
+            color: root.pillColor
         }
         Item {
             id: veq
@@ -419,10 +432,7 @@ AppletItem {
                     onTriggered: Applet.colorTheme = 6
                 }
                 LP.MenuSeparator {}
-                LP.MenuItem {
-                    text: qsTr("深色主题")
-                    enabled: false
-                }
+                LP.MenuItem { text: qsTr("深色主题"); enabled: false }
                 LP.MenuItem {
                     text: Applet.colorThemeNames[7]
                     checkable: true
@@ -446,6 +456,151 @@ AppletItem {
                     checkable: true
                     checked: Applet.colorTheme === 10
                     onTriggered: Applet.colorTheme = 10
+                }
+                LP.MenuSeparator {}
+                LP.MenuItem {
+                    text: Applet.colorThemeNames[11]
+                    checkable: true
+                    checked: Applet.colorTheme === 11
+                    onTriggered: Applet.colorTheme = 11
+                }
+            }
+            LP.Menu {
+                id: customColorMenu
+                title: qsTr("自定义配色")
+                LP.Menu {
+                    id: fontColorMenu
+                    title: qsTr("字体颜色")
+                    LP.MenuItem {
+                        text: qsTr("跟随主题")
+                        checkable: true
+                        checked: Applet.customTextColor === ""
+                        onTriggered: { Applet.customTextColor = ""; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("纯白 #FFFFFF")
+                        checkable: true
+                        checked: Applet.customTextColor === "#FFFFFF"
+                        onTriggered: { Applet.customTextColor = "#FFFFFF"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("柠檬黄 #FFD75E")
+                        checkable: true
+                        checked: Applet.customTextColor === "#FFD75E"
+                        onTriggered: { Applet.customTextColor = "#FFD75E"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("苹果青 #7EE0A3")
+                        checkable: true
+                        checked: Applet.customTextColor === "#7EE0A3"
+                        onTriggered: { Applet.customTextColor = "#7EE0A3"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("冰川蓝 #8FD3FF")
+                        checkable: true
+                        checked: Applet.customTextColor === "#8FD3FF"
+                        onTriggered: { Applet.customTextColor = "#8FD3FF"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("霓虹紫 #C792EA")
+                        checkable: true
+                        checked: Applet.customTextColor === "#C792EA"
+                        onTriggered: { Applet.customTextColor = "#C792EA"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("樱花粉 #FF9EC7")
+                        checkable: true
+                        checked: Applet.customTextColor === "#FF9EC7"
+                        onTriggered: { Applet.customTextColor = "#FF9EC7"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("珊瑚红 #FF7A6E")
+                        checkable: true
+                        checked: Applet.customTextColor === "#FF7A6E"
+                        onTriggered: { Applet.customTextColor = "#FF7A6E"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("暖阳橙 #FFB877")
+                        checkable: true
+                        checked: Applet.customTextColor === "#FFB877"
+                        onTriggered: { Applet.customTextColor = "#FFB877"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("浅灰 #B9BEC9")
+                        checkable: true
+                        checked: Applet.customTextColor === "#B9BEC9"
+                        onTriggered: { Applet.customTextColor = "#B9BEC9"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("深灰 #3A3F47")
+                        checkable: true
+                        checked: Applet.customTextColor === "#3A3F47"
+                        onTriggered: { Applet.customTextColor = "#3A3F47"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("墨黑 #101216")
+                        checkable: true
+                        checked: Applet.customTextColor === "#101216"
+                        onTriggered: { Applet.customTextColor = "#101216"; Applet.colorTheme = 11 }
+                    }
+                }
+                LP.Menu {
+                    id: bgColorMenu
+                    title: qsTr("背景颜色")
+                    LP.MenuItem {
+                        text: qsTr("无背景（跟随系统）")
+                        checkable: true
+                        checked: Applet.customBgColor === ""
+                        onTriggered: { Applet.customBgColor = ""; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("半透明黑 #59000000")
+                        checkable: true
+                        checked: Applet.customBgColor === "#59000000"
+                        onTriggered: { Applet.customBgColor = "#59000000"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("曜石黑 #CC171B22")
+                        checkable: true
+                        checked: Applet.customBgColor === "#CC171B22"
+                        onTriggered: { Applet.customBgColor = "#CC171B22"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("深空蓝 #CC142340")
+                        checkable: true
+                        checked: Applet.customBgColor === "#CC142340"
+                        onTriggered: { Applet.customBgColor = "#CC142340"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("暮光紫 #CC251C3E")
+                        checkable: true
+                        checked: Applet.customBgColor === "#CC251C3E"
+                        onTriggered: { Applet.customBgColor = "#CC251C3E"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("墨夜绿 #CC0F2A1D")
+                        checkable: true
+                        checked: Applet.customBgColor === "#CC0F2A1D"
+                        onTriggered: { Applet.customBgColor = "#CC0F2A1D"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("纯黑 #E6000000")
+                        checkable: true
+                        checked: Applet.customBgColor === "#E6000000"
+                        onTriggered: { Applet.customBgColor = "#E6000000"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("浅灰 #B3E0E0E0")
+                        checkable: true
+                        checked: Applet.customBgColor === "#B3E0E0E0"
+                        onTriggered: { Applet.customBgColor = "#B3E0E0E0"; Applet.colorTheme = 11 }
+                    }
+                    LP.MenuItem {
+                        text: qsTr("纯白 #E6FFFFFF")
+                        checkable: true
+                        checked: Applet.customBgColor === "#E6FFFFFF"
+                        onTriggered: { Applet.customBgColor = "#E6FFFFFF"; Applet.colorTheme = 11 }
+                    }
                 }
             }
 

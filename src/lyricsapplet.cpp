@@ -73,6 +73,7 @@ const QStringList &themeNames()
         QStringLiteral("深空蓝"),
         QStringLiteral("暮光紫"),
         QStringLiteral("墨夜绿"),
+        QStringLiteral("自定义配色"),
     };
     return names;
 }
@@ -90,6 +91,7 @@ const QStringList &themeColors()
         QStringLiteral("#9FC3FF"),   // deep space blue
         QStringLiteral("#D9C2FF"),   // twilight purple
         QStringLiteral("#9FE8C0"),   // ink-green
+        QString(),                    // custom palette: colours from ui/textColor & ui/bgColor
     };
     return colors;
 }
@@ -102,6 +104,7 @@ const QStringList &themeBgColors()
         QStringLiteral("#CC142340"), // deep-space navy
         QStringLiteral("#CC251C3E"), // twilight violet
         QStringLiteral("#CC0F2A1D"), // ink green
+        QString(),                    // custom palette: pill from ui/bgColor when set
     };
     return bgs;
 }
@@ -125,6 +128,34 @@ void saveColorTheme(int index)
     s.setValue(QStringLiteral("ui/colorTheme"), index);
     s.sync();
 }
+QString loadCustomColor(const QString &key)
+{
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    return s.value(key, QString()).toString();
+}
+void saveCustomColor(const QString &key, const QString &color)
+{
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    s.setValue(key, color);
+    s.sync();
+}
+bool validColorCode(const QString &color)
+{
+    // accept #RGB / #RRGGBB / #AARRGGBB
+    if (!color.startsWith(QLatin1Char('#')) || color.size() < 4)
+        return false;
+    for (int i = 1; i < color.size(); ++i) {
+        const QChar c = color.at(i);
+        const bool hex = (c >= QLatin1Char('0') && c <= QLatin1Char('9'))
+                      || (c >= QLatin1Char('a') && c <= QLatin1Char('f'))
+                      || (c >= QLatin1Char('A') && c <= QLatin1Char('F'));
+        if (!hex)
+            return false;
+    }
+    return color.size() == 4 || color.size() == 7 || color.size() == 9;
+}
 } // namespace
 
 LyricsApplet::LyricsApplet(QObject *parent)
@@ -132,6 +163,8 @@ LyricsApplet::LyricsApplet(QObject *parent)
     , m_fetcher(new LyricsFetcher(this))
 {
     m_colorTheme = loadColorTheme();
+    m_customTextColor = loadCustomColor(QStringLiteral("ui/textColor"));
+    m_customBgColor = loadCustomColor(QStringLiteral("ui/bgColor"));
     m_posTimer.setInterval(200);
     connect(&m_posTimer, &QTimer::timeout, this, &LyricsApplet::updateLineForPosition);
     connect(m_fetcher, &LyricsFetcher::lyricsReady, this, &LyricsApplet::onLyricsReady);
@@ -163,6 +196,28 @@ void LyricsApplet::setColorTheme(int index)
     qWarning() << "[dock-lyrics] color theme ->" << m_colorTheme
                << themeNames().value(m_colorTheme);
     emit colorThemeChanged();
+}
+
+void LyricsApplet::setCustomTextColor(const QString &color)
+{
+    const QString c = validColorCode(color) ? color : QString();
+    if (c == m_customTextColor)
+        return;
+    m_customTextColor = c;
+    saveCustomColor(QStringLiteral("ui/textColor"), m_customTextColor);
+    qWarning() << "[dock-lyrics] custom text color ->" << m_customTextColor;
+    emit customColorChanged();
+}
+
+void LyricsApplet::setCustomBgColor(const QString &color)
+{
+    const QString c = validColorCode(color) ? color : QString();
+    if (c == m_customBgColor)
+        return;
+    m_customBgColor = c;
+    saveCustomColor(QStringLiteral("ui/bgColor"), m_customBgColor);
+    qWarning() << "[dock-lyrics] custom bg color ->" << m_customBgColor;
+    emit customColorChanged();
 }
 
 bool LyricsApplet::load()
