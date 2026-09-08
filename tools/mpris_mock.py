@@ -9,6 +9,7 @@ keeps advancing Position every 500 ms. A .lrc sidecar at
 Usage: python3 mpris_mock.py
 """
 import time
+import os
 from gi.repository import GLib
 import dbus, dbus.service
 import dbus.mainloop.glib
@@ -32,7 +33,8 @@ class MockPlayer(dbus.service.Object):
     # ---------- helpers ----------
     def _meta(self):
         import urllib.parse
-        url = "file:///home/song/Music/" + urllib.parse.quote(self.title + ".mp3")
+        url = "file://" + os.path.join(os.path.expanduser("~"), "Music",
+                           self.title + ".mp3")
         return dbus.Dictionary({
             "xesam:title": dbus.String(self.title),
             "xesam:artist": dbus.Array([dbus.String(a) for a in self.artist], signature="s"),

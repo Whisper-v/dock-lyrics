@@ -2,3 +2,5 @@ build/
 *.deb
 docs/.keep
 tools/mpris_mock.log
+__pycache__/
+*.pyc
