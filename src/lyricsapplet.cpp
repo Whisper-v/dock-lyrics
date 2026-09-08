@@ -69,6 +69,10 @@ const QStringList &themeNames()
         QStringLiteral("霓虹紫"),
         QStringLiteral("樱花粉"),
         QStringLiteral("暖阳橙"),
+        QStringLiteral("曜石黑"),
+        QStringLiteral("深空蓝"),
+        QStringLiteral("暮光紫"),
+        QStringLiteral("墨夜绿"),
     };
     return names;
 }
@@ -82,8 +86,24 @@ const QStringList &themeColors()
         QStringLiteral("#C792EA"),   // neon purple
         QStringLiteral("#FF9EC7"),   // sakura pink
         QStringLiteral("#FFB877"),   // sunset orange
+        QStringLiteral("#E6EBF7"),   // obsidian: soft white
+        QStringLiteral("#9FC3FF"),   // deep space blue
+        QStringLiteral("#D9C2FF"),   // twilight purple
+        QStringLiteral("#9FE8C0"),   // ink-green
     };
     return colors;
+}
+const QStringList &themeBgColors()
+{
+    static const QStringList bgs = {
+        QString(),                    // follow system: transparent pill
+        QString(), QString(), QString(), QString(), QString(), QString(), // vivid themes keep default hover pill
+        QStringLiteral("#CC171B22"), // obsidian graphite
+        QStringLiteral("#CC142340"), // deep-space navy
+        QStringLiteral("#CC251C3E"), // twilight violet
+        QStringLiteral("#CC0F2A1D"), // ink green
+    };
+    return bgs;
 }
 QString themeConfigPath()
 {
@@ -126,6 +146,11 @@ QStringList LyricsApplet::colorThemeNames() const
 QStringList LyricsApplet::colorThemeColors() const
 {
     return themeColors();
+}
+
+QStringList LyricsApplet::colorThemeBgColors() const
+{
+    return themeBgColors();
 }
 
 void LyricsApplet::setColorTheme(int index)

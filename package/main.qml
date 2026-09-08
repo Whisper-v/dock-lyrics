@@ -28,6 +28,11 @@ AppletItem {
     readonly property color themeColorValue: Applet.colorThemeColors.length > 0
         ? Applet.colorThemeColors[Math.min(Applet.colorTheme, Applet.colorThemeColors.length - 1)]
         : "#FFFFFF"
+    // dark themes additionally bring their own pill background (empty == keep system behaviour)
+    readonly property string themeBgValue: Applet.colorThemeBgColors.length > 0
+        ? Applet.colorThemeBgColors[Math.min(Applet.colorTheme, Applet.colorThemeBgColors.length - 1)]
+        : ""
+    readonly property bool customBg: themeBgValue.length > 0
     // 0 == follow the system palette; otherwise use the user-picked accent
     readonly property color lyricColor: customTheme ? themeColorValue : D.ColorSelector.textPalette
     readonly property color eqColor: customTheme ? themeColorValue : D.ColorSelector.iconTextPalette
@@ -169,9 +174,10 @@ AppletItem {
         visible: !root.verticalDock
         radius: Math.round(root.dockSize * 0.16)
         property D.Palette bgPalette: DockPalette.backgroundPalette
-        color: bgHovered ? D.ColorSelector.bgPalette : "transparent"
         property bool bgHovered: false
-        onBgHoveredChanged: bg.color = bgHovered ? D.ColorSelector.bgPalette : "transparent"
+        // dark themes keep their pill always visible; vivid themes only show it while hovered
+        color: root.customBg ? root.themeBgValue
+                             : (bgHovered ? D.ColorSelector.bgPalette : "transparent")
         HoverHandler {
             id: pillHover
             onHoveredChanged: bg.bgHovered = hovered
@@ -293,6 +299,12 @@ AppletItem {
     Item {
         anchors.fill: parent
         visible: root.verticalDock
+        Rectangle {
+            anchors.fill: parent
+            visible: root.customBg
+            radius: Math.round(root.dockSize * 0.16)
+            color: root.themeBgValue
+        }
         Item {
             id: veq
             anchors.centerIn: parent
@@ -405,6 +417,35 @@ AppletItem {
                     checkable: true
                     checked: Applet.colorTheme === 6
                     onTriggered: Applet.colorTheme = 6
+                }
+                LP.MenuSeparator {}
+                LP.MenuItem {
+                    text: qsTr("深色主题")
+                    enabled: false
+                }
+                LP.MenuItem {
+                    text: Applet.colorThemeNames[7]
+                    checkable: true
+                    checked: Applet.colorTheme === 7
+                    onTriggered: Applet.colorTheme = 7
+                }
+                LP.MenuItem {
+                    text: Applet.colorThemeNames[8]
+                    checkable: true
+                    checked: Applet.colorTheme === 8
+                    onTriggered: Applet.colorTheme = 8
+                }
+                LP.MenuItem {
+                    text: Applet.colorThemeNames[9]
+                    checkable: true
+                    checked: Applet.colorTheme === 9
+                    onTriggered: Applet.colorTheme = 9
+                }
+                LP.MenuItem {
+                    text: Applet.colorThemeNames[10]
+                    checkable: true
+                    checked: Applet.colorTheme === 10
+                    onTriggered: Applet.colorTheme = 10
                 }
             }
 

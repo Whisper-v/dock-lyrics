@@ -34,6 +34,7 @@ class LyricsApplet : public DApplet
     Q_PROPERTY(int colorTheme READ colorTheme WRITE setColorTheme NOTIFY colorThemeChanged)
     Q_PROPERTY(QStringList colorThemeNames READ colorThemeNames CONSTANT)
     Q_PROPERTY(QStringList colorThemeColors READ colorThemeColors CONSTANT)
+    Q_PROPERTY(QStringList colorThemeBgColors READ colorThemeBgColors CONSTANT)
     Q_PROPERTY(QString lyricSource READ lyricSource NOTIFY lyricsChanged)
 
 public:
@@ -60,6 +61,7 @@ public:
     void setColorTheme(int index);
     QStringList colorThemeNames() const;
     QStringList colorThemeColors() const;
+    QStringList colorThemeBgColors() const;
     QString lyricSource() const { return m_lyricSource; }
 
     Q_INVOKABLE void playPause();
