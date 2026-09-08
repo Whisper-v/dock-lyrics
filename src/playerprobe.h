@@ -4,6 +4,8 @@
 #include <QString>
 #include <QVariantMap>
 
+class QDBusMessage;
+
 // Wraps MPRIS D-Bus signal watching for one concrete player service so that
 // we always know which player emitted PropertiesChanged.
 class PlayerProbe : public QObject
@@ -19,9 +21,10 @@ Q_SIGNALS:
     void playerPropertiesChanged(const QString &service, const QVariantMap &changedProperties);
 
 private Q_SLOTS:
-    void onPropertiesChanged(const QString &interfaceName,
-                             const QVariantMap &changedProperties,
-                             const QStringList &invalidatedProperties);
+    // Receives the raw QDBusMessage: Qt cannot reliably demarshal the a{sv}
+    // argument of PropertiesChanged on its own (nested maps arrive as
+    // QDBusArgument), so we parse it manually.
+    void onPropertiesChanged(const QDBusMessage &msg);
 
 private:
     QString m_service;

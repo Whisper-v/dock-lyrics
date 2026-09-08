@@ -59,10 +59,10 @@ AppletItem {
 
     Connections {
         target: Applet
-        function onPlayingChanged() { refreshDisplayText() }
-        function onLineChanged() { refreshDisplayText() }
-        function onLyricsChanged() { refreshDisplayText() }
-        function onSongChanged() { refreshDisplayText() }
+        onPlayingChanged: refreshDisplayText()
+        onLineChanged: refreshDisplayText()
+        onLyricsChanged: refreshDisplayText()
+        onSongChanged: refreshDisplayText()
     }
 
     // slow page-flip for untimed (plain) lyrics
@@ -76,7 +76,13 @@ AppletItem {
         }
     }
 
-    Component.onCompleted: refreshDisplayText()
+    Component.onCompleted: {
+        console.warn("[dock-lyrics-qml] onCompleted playing=" + Applet.playing
+                    + " title=" + Applet.title + " artist=" + Applet.artist
+                    + " hasLyrics=" + Applet.hasLyrics + " synced=" + Applet.synced
+                    + " state=" + Applet.stateText)
+        refreshDisplayText()
+    }
 
     /* ---------- tooltip ---------- */
     readonly property string tooltipText: {
@@ -174,20 +180,20 @@ AppletItem {
                         anchors.bottom: parent.bottom; anchors.right: parent.right
                     }
 
-                    SequentialAnimation on eq1.height {
+                    SequentialAnimation {
                         running: Applet.playing; loops: Animation.Infinite
-                        NumberAnimation { from: 6; to: Math.max(8, eqBox.height); duration: 260; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: Math.max(8, eqBox.height); to: 6; duration: 260; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq1; property: "height"; from: 6; to: Math.max(8, eqBox.height); duration: 260; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq1; property: "height"; from: Math.max(8, eqBox.height); to: 6; duration: 260; easing.type: Easing.InOutSine }
                     }
-                    SequentialAnimation on eq2.height {
+                    SequentialAnimation {
                         running: Applet.playing; loops: Animation.Infinite
-                        NumberAnimation { from: eqBox.height; to: 6; duration: 300; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: 6; to: eqBox.height; duration: 300; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq2; property: "height"; from: eqBox.height; to: 6; duration: 300; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq2; property: "height"; from: 6; to: eqBox.height; duration: 300; easing.type: Easing.InOutSine }
                     }
-                    SequentialAnimation on eq3.height {
+                    SequentialAnimation {
                         running: Applet.playing; loops: Animation.Infinite
-                        NumberAnimation { from: 7; to: eqBox.height; duration: 340; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: eqBox.height; to: 7; duration: 240; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq3; property: "height"; from: 7; to: eqBox.height; duration: 340; easing.type: Easing.InOutSine }
+                        NumberAnimation { target: eq3; property: "height"; from: eqBox.height; to: 7; duration: 240; easing.type: Easing.InOutSine }
                     }
                 }
             }
@@ -279,20 +285,20 @@ AppletItem {
                 anchors.bottom: parent.bottom; anchors.right: parent.right
             }
 
-            SequentialAnimation on vb1.height {
+            SequentialAnimation {
                 running: Applet.playing; loops: Animation.Infinite
-                NumberAnimation { from: 6; to: Math.max(8, veq.height); duration: 260; easing.type: Easing.InOutSine }
-                NumberAnimation { from: Math.max(8, veq.height); to: 6; duration: 260; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb1; property: "height"; from: 6; to: Math.max(8, veq.height); duration: 260; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb1; property: "height"; from: Math.max(8, veq.height); to: 6; duration: 260; easing.type: Easing.InOutSine }
             }
-            SequentialAnimation on vb2.height {
+            SequentialAnimation {
                 running: Applet.playing; loops: Animation.Infinite
-                NumberAnimation { from: veq.height; to: 6; duration: 300; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 6; to: veq.height; duration: 300; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb2; property: "height"; from: veq.height; to: 6; duration: 300; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb2; property: "height"; from: 6; to: veq.height; duration: 300; easing.type: Easing.InOutSine }
             }
-            SequentialAnimation on vb3.height {
+            SequentialAnimation {
                 running: Applet.playing; loops: Animation.Infinite
-                NumberAnimation { from: 7; to: veq.height; duration: 340; easing.type: Easing.InOutSine }
-                NumberAnimation { from: veq.height; to: 7; duration: 240; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb3; property: "height"; from: 7; to: veq.height; duration: 340; easing.type: Easing.InOutSine }
+                NumberAnimation { target: vb3; property: "height"; from: veq.height; to: 7; duration: 240; easing.type: Easing.InOutSine }
             }
         }
     }

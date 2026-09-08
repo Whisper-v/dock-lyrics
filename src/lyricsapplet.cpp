@@ -4,6 +4,7 @@
 
 #include <QDBusConnection>
 #include <QDBusInterface>
+#include <QDBusArgument>
 #include <QDBusMessage>
 #include <QDateTime>
 #include <QDebug>
@@ -13,6 +14,7 @@
 #include <QVariantMap>
 
 #include "lyricsfetcher.h"
+#include "qdbusutil.h"
 
 static const QString kMprisPrefix = QStringLiteral("org.mpris.MediaPlayer2.");
 static const QString kPlayerPath = QStringLiteral("/org/mpris/MediaPlayer2");
@@ -24,6 +26,7 @@ static QStringList toStringList(const QVariant &v)
         return QStringList() << v.toString();
     return v.toStringList();
 }
+
 
 LyricsApplet::LyricsApplet(QObject *parent)
     : DApplet(parent)
@@ -37,6 +40,7 @@ LyricsApplet::LyricsApplet(QObject *parent)
 
 bool LyricsApplet::load()
 {
+    qWarning() << "[dock-lyrics] load()";
     return DApplet::load();
 }
 
@@ -53,6 +57,7 @@ bool LyricsApplet::init()
         SLOT(onNameOwnerChanged(QString, QString, QString)));
 
     scanPlayers();
+    qWarning() << "[dock-lyrics] init done, players:" << m_players.keys() << "active:" << m_activeService;
     return true;
 }
 
@@ -89,6 +94,7 @@ void LyricsApplet::scanPlayers()
 
 bool LyricsApplet::addPlayer(const QString &service)
 {
+    qWarning() << "[dock-lyrics] addPlayer" << service;
     if (m_players.contains(service))
         return false;
 
@@ -119,18 +125,30 @@ void LyricsApplet::removePlayer(const QString &service)
 void LyricsApplet::readPlayerState(const QString &service)
 {
     PlayerState &st = m_players[service];
-    QDBusInterface player(service, kPlayerPath, kPlayerIface, QDBusConnection::sessionBus());
-
-    const QString status = player.property("PlaybackStatus").toString();
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        service, kPlayerPath,
+        QStringLiteral("org.freedesktop.DBus.Properties"),
+        QStringLiteral("GetAll"));
+    msg << kPlayerIface;
+    QDBusMessage reply = QDBusConnection::sessionBus().call(msg);
+    if (reply.type() != QDBusMessage::ReplyMessage) {
+        qWarning() << "[dock-lyrics] readPlayerState FAILED" << service
+                   << reply.errorName() << reply.errorMessage();
+        return;
+    }
+    const QVariantMap props = qdbusVariantToMap(reply.arguments().value(0));
+    const QString status = props.value(QStringLiteral("PlaybackStatus")).toString();
     if (!status.isEmpty())
         st.status = status;
-    const QVariant position = player.property("Position");
-    if (position.isValid())
-        st.positionUs = position.toLongLong();
-    const QVariant meta = player.property("Metadata");
-    if (meta.canConvert<QVariantMap>())
-        st.metadata = meta.toMap();
+    const qulonglong pos = props.value(QStringLiteral("Position")).toULongLong();
+    if (pos > 0 || props.contains(QStringLiteral("Position")))
+        st.positionUs = qint64(pos);
+    const QVariant meta = props.value(QStringLiteral("Metadata"));
+    st.metadata = qdbusVariantToMap(meta);
     st.lastSeen = QDateTime::currentMSecsSinceEpoch();
+    qWarning() << "[dock-lyrics] readPlayerState OK" << service
+               << "status=" << st.status << "posUs=" << st.positionUs
+               << "title=" << st.metadata.value(QStringLiteral("xesam:title")).toString();
 }
 
 void LyricsApplet::onPlayerProperties(const QString &service, const QVariantMap &changed)
@@ -188,6 +206,8 @@ void LyricsApplet::chooseActivePlayer()
 void LyricsApplet::applyActivePlayer()
 {
     if (m_activeService.isEmpty() || !m_players.contains(m_activeService)) {
+        qWarning() << "[dock-lyrics] no active player; playing=false";
+        
         const bool wasPlaying = m_playing;
         m_playing = false;
         m_posTimer.stop();
@@ -204,6 +224,8 @@ void LyricsApplet::applyActivePlayer()
     if (nowPlaying != m_playing) {
         m_playing = nowPlaying;
         emit playingChanged();
+        qWarning() << "[dock-lyrics] active" << m_playerName << "status" << status
+                << "title=" << m_title << "artist=" << m_artist;
     }
 
     const QVariantMap meta = st.metadata;
@@ -239,6 +261,7 @@ void LyricsApplet::applyActivePlayer()
     // (Re)load lyrics when the song actually changed.
     const QString key = currentSongKey();
     if (songChangedNow && m_playing && !key.isEmpty() && key != m_lyricKey) {
+        qWarning() << "[dock-lyrics] song changed -> fetch lyrics for" << key;
         m_lyricKey.clear();
         requestLyricsForCurrentSong();
     }
@@ -317,6 +340,7 @@ void LyricsApplet::requestLyricsForCurrentSong()
     m_loadingLyrics = true;
     setStateText(QStringLiteral("正在获取歌词…"));
     emit lyricsChanged();
+    qWarning() << "[dock-lyrics] requestLyrics key=" << key;
     m_fetcher->requestLyrics(key, m_title, m_artist, metadataUrlHint());
 }
 
@@ -345,6 +369,7 @@ void LyricsApplet::onLyricsReady(const QString &key, const QString &source, cons
     }
 
     m_hasLyrics = !m_lyricLines.isEmpty();
+    qWarning() << "[dock-lyrics] lyricsReady src=" << source << "lines=" << m_lyricLines.size();
     if (m_hasLyrics)
         setStateText(source == QLatin1String("online") ? QStringLiteral("在线歌词")
                                                        : QStringLiteral("本地歌词"));
