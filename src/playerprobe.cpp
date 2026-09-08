@@ -23,6 +23,13 @@ PlayerProbe::PlayerProbe(const QString &service, QObject *parent)
         QStringLiteral("PropertiesChanged"),
         this,
         SLOT(onPropertiesChanged(QDBusMessage)));
+    QDBusConnection::sessionBus().connect(
+        QString(),
+        QStringLiteral("/org/mpris/MediaPlayer2"),
+        QStringLiteral("org.mpris.MediaPlayer2.Player"),
+        QStringLiteral("Seeked"),
+        this,
+        SLOT(onSeeked(QDBusMessage)));
 }
 
 void PlayerProbe::onPropertiesChanged(const QDBusMessage &msg)
@@ -42,4 +49,20 @@ void PlayerProbe::onPropertiesChanged(const QDBusMessage &msg)
     if (changed.isEmpty())
         return;
     emit playerPropertiesChanged(m_service, changed);
+}
+
+void PlayerProbe::onSeeked(const QDBusMessage &msg)
+{
+    QDBusReply<QString> owner =
+        QDBusConnection::sessionBus().interface()->serviceOwner(m_service);
+    if (!owner.isValid() || owner.value() != msg.service())
+        return;
+
+    const QVariantList args = msg.arguments();
+    if (args.isEmpty())
+        return;
+    bool ok = false;
+    const qint64 positionUs = args.value(0).toLongLong(&ok);
+    if (ok && positionUs >= 0)
+        emit playerSeeked(m_service, positionUs);
 }

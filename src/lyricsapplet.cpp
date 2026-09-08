@@ -130,6 +130,8 @@ bool LyricsApplet::addPlayer(const QString &service)
     m_probes.insert(service, probe);
     connect(probe, &PlayerProbe::playerPropertiesChanged,
             this, &LyricsApplet::onPlayerProperties);
+    connect(probe, &PlayerProbe::playerSeeked,
+            this, &LyricsApplet::onPlayerSeeked);
 
     readPlayerState(service);
     chooseActivePlayer();
@@ -176,6 +178,46 @@ void LyricsApplet::readPlayerState(const QString &service)
     qWarning() << "[dock-lyrics] readPlayerState OK" << service
                << "status=" << st.status << "posUs=" << st.positionUs
                << "title=" << st.metadata.value(QStringLiteral("xesam:title")).toString();
+}
+
+void LyricsApplet::onPlayerSeeked(const QString &service, qint64 positionUs)
+{
+    if (service != m_activeService)
+        return;
+    jumpToPosition(positionUs);
+    qWarning() << "[dock-lyrics] seeked to" << positionUs / 1000 << "ms"
+               << "line=" << m_line;
+}
+
+void LyricsApplet::jumpToPosition(qint64 positionUs)
+{
+    if (m_activeService.isEmpty() || !m_players.contains(m_activeService))
+        return;
+    PlayerState &st = m_players[m_activeService];
+    st.positionUs = positionUs;
+
+    // Reset our internal clock to the new absolute position so the running
+    // lyric timer continues correctly from here.
+    m_basePositionUs = positionUs;
+    m_clock.restart();
+    m_positionMs = qMax<qint64>(0, positionUs / 1000);
+    if (m_durationMs > 0)
+        m_positionMs = qMin(m_positionMs, m_durationMs);
+    emit positionChanged();
+
+    // Recompute the displayed line immediately (works while paused too).
+    if (m_synced && !m_lines.isEmpty()) {
+        int idx = m_currentIndex < 0 ? 0 : m_currentIndex;
+        while (idx < m_lines.size() - 1 && m_lines.at(idx + 1).timeMs <= m_positionMs)
+            ++idx;
+        while (idx > 0 && m_lines.at(idx).timeMs > m_positionMs)
+            --idx;
+        if (idx != m_currentIndex) {
+            m_currentIndex = idx;
+            m_line = m_lines.at(idx).text;
+            emit lineChanged();
+        }
+    }
 }
 
 void LyricsApplet::onPlayerProperties(const QString &service, const QVariantMap &changed)

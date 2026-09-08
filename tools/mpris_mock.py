@@ -89,8 +89,11 @@ class MockPlayer(dbus.service.Object):
 
     @dbus.service.method("org.mpris.MediaPlayer2.Player", in_signature="x", out_signature="")
     def Seek(self, offset):
-        self.position = max(0, self.position + int(offset))
+        # Real players announce the new absolute position through Seeked.
+        self.position = max(0, min(self.length, self.position + int(offset)))
         self._last = time.monotonic()
+        self.Seeked(self.position)
+        self._notify({"Position": self.position})
 
     # ---------- org.mpris.MediaPlayer2 ----------
     @dbus.service.method("org.mpris.MediaPlayer2", in_signature="", out_signature="")
@@ -129,9 +132,13 @@ class MockPlayer(dbus.service.Object):
             return dbus.Dictionary({"Identity": dbus.String("Dock Lyrics Mock")}, signature="sv")
         return dbus.Dictionary({}, signature="sv")
 
-    # ---------- signal ----------
+    # ---------- signals ----------
     @dbus.service.signal("org.freedesktop.DBus.Properties", signature="sa{sv}as")
     def PropertiesChanged(self, interface_name, changed_properties, invalidated):
+        pass
+
+    @dbus.service.signal("org.mpris.MediaPlayer2.Player", signature="x")
+    def Seeked(self, position):
         pass
 
 

@@ -139,6 +139,7 @@ lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种�
 - 通过 D-Bus 监听 `NameOwnerChanged`（播放器注册/退出）与 `PropertiesChanged`（`PlaybackStatus`、`Metadata`、`Position`）。
 - 对**活动播放器**主动 `GetAll` 拉取一次完整元数据；Chromium 内核播放器上报的页面地址（如 `index.html#/like`）会被识别为垃圾标题并过滤，避免误取歌词。
 - 播放进度优先用播放器上报的 `Position`；播放器不上报位置（如 QQ 音乐网页版 `CanSeek=false`）时，用内部时钟自 0 累计同步。
+- **拖动进度条（seek）**：监听 MPRIS `Seeked` 信号，收到新位置后立即重置内部时钟并刷新当前歌词行——播放中、暂停时拖动都即时同步。
 
 ### 架构简图
 

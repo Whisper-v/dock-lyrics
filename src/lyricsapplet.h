@@ -71,6 +71,7 @@ protected Q_SLOTS:
 
 private:
     void onPlayerProperties(const QString &service, const QVariantMap &changedProperties);
+    void onPlayerSeeked(const QString &service, qint64 positionUs);
     struct PlayerState {
         QString status;   // Playing / Paused / Stopped
         QVariantMap metadata;
@@ -89,6 +90,7 @@ private:
     void onLyricsReady(const QString &key, const QString &source, const QString &lrcText);
     void onLyricsFailed(const QString &key);
     void updateLineForPosition();
+    void jumpToPosition(qint64 positionUs);
     void setStateText(const QString &t);
 
     QString currentSongKey() const;
