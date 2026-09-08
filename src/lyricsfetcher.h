@@ -5,8 +5,12 @@
 #include <QPointer>
 #include <QString>
 
-// Fetch LRC lyrics for a song. Local .lrc files are searched first,
-// then the online NetEase Cloud Music lyrics database is queried.
+// Fetch LRC lyrics for a song.
+//   1. local .lrc sidecar files (next to the audio file / common music dirs)
+//   2. NetEase Cloud Music (music.163.com) online database
+//   3. LRCLIB (lrclib.net) open lyric database as a final fallback
+// Sources are reported to the caller via the `source` argument:
+//   "local" / "netease" / "lrclib".
 class LyricsFetcher : public QObject
 {
     Q_OBJECT
@@ -24,6 +28,13 @@ signals:
     void fetchFailed(const QString &key);
 
 private:
+    enum class Stage {
+        Idle,
+        NeteaseSearch,
+        NeteaseLyric,
+        LrclibSearch,
+    };
+
     struct Pending {
         QString key;
         QString title;
@@ -32,14 +43,19 @@ private:
 
     QString findLocalLrc(const QString &title, const QString &artist,
                          const QString &localUrlHint) const;
-    void startOnlineSearch(const Pending &p);
-    void onSearchFinished();
-    void startLyricRequest(qint64 songId);
-    void onLyricFinished();
+
+    void startNeteaseSearch();
+    void startNeteaseLyric(qint64 songId);
+    void startLrclibSearch();
+
+    void doGet(const QUrl &url, Stage stage);
+    void onReplyFinished();
+    void emitFailure(const QString &key);
 
     QNetworkAccessManager m_nam;
     QPointer<QNetworkReply> m_currentReply;
     Pending m_pending;
+    Stage m_stage = Stage::Idle;
 };
 
 QString urlQueryEncode(const QString &s);

@@ -27,6 +27,33 @@ static QStringList toStringList(const QVariant &v)
     return v.toStringList();
 }
 
+// Some players (Chromium-based web players, e.g. QQ Music) expose the page URL
+// or SPA route as the media title when no real MediaSession metadata is set.
+// Treat such strings as "no song title" so we don't fetch lyrics for garbage.
+static bool isUsableSongTitle(const QString &raw)
+{
+    QString s = raw.trimmed();
+    if (s.isEmpty())
+        return false;
+    if (s.length() > 120)
+        return false;
+    if (s.startsWith(QStringLiteral("http://"))
+        || s.startsWith(QStringLiteral("https://"))
+        || s.startsWith(QStringLiteral("file://"))
+        || s.startsWith(QStringLiteral("about:")))
+        return false;
+    if (s.contains(QStringLiteral("#/")))          // e.g. "index.html#/like"
+        return false;
+    if (s.startsWith(QStringLiteral("index.")))
+        return false;
+    const QString lower = s.toLower();
+    if (lower.contains(QLatin1Char('/'))
+        && (lower.endsWith(QStringLiteral(".html")) || lower.endsWith(QStringLiteral(".htm"))
+            || lower.endsWith(QStringLiteral(".php")) || lower.endsWith(QStringLiteral(".aspx"))))
+        return false;
+    return true;
+}
+
 
 LyricsApplet::LyricsApplet(QObject *parent)
     : DApplet(parent)
@@ -221,6 +248,7 @@ void LyricsApplet::applyActivePlayer()
 
     const QString status = st.status;
     const bool nowPlaying = (status == QLatin1String("Playing"));
+    const bool resumed = nowPlaying && !m_playing; // pause -> play transition
     if (nowPlaying != m_playing) {
         m_playing = nowPlaying;
         emit playingChanged();
@@ -230,13 +258,16 @@ void LyricsApplet::applyActivePlayer()
 
     const QVariantMap meta = st.metadata;
     QString title = meta.value(QStringLiteral("xesam:title")).toString();
+    if (!isUsableSongTitle(title)) {
+        const QString fromUrl = QFileInfo(meta.value(QStringLiteral("xesam:url")).toString())
+                                    .completeBaseName();
+        title = isUsableSongTitle(fromUrl) ? fromUrl : QString();
+    }
     const QString artist = toStringList(meta.value(QStringLiteral("xesam:artist"))).join(QStringLiteral(" / "));
     const QString album = meta.value(QStringLiteral("xesam:album")).toString();
     const qint64 durationUs = meta.value(QStringLiteral("mpris:length")).toLongLong();
 
     const bool songChangedNow = (title != m_title || artist != m_artist || album != m_album);
-    if (title.isEmpty())
-        title = QFileInfo(meta.value(QStringLiteral("xesam:url")).toString()).completeBaseName();
     m_title = title;
     m_artist = artist;
     m_album = album;
@@ -262,6 +293,15 @@ void LyricsApplet::applyActivePlayer()
     const QString key = currentSongKey();
     if (songChangedNow && m_playing && !key.isEmpty() && key != m_lyricKey) {
         qWarning() << "[dock-lyrics] song changed -> fetch lyrics for" << key;
+        m_lyricKey.clear();
+        requestLyricsForCurrentSong();
+    } else if (resumed && m_playing && !key.isEmpty()
+               && m_lyricFailed.value(key, false)) {
+        // A previous lookup for this song failed (e.g. temporary network issue
+        // or the online database lacked the track). Give it another chance now
+        // that the user resumed playback.
+        qWarning() << "[dock-lyrics] retry failed lyric lookup on resume:" << key;
+        m_lyricFailed.remove(key);
         m_lyricKey.clear();
         requestLyricsForCurrentSong();
     }
@@ -371,8 +411,8 @@ void LyricsApplet::onLyricsReady(const QString &key, const QString &source, cons
     m_hasLyrics = !m_lyricLines.isEmpty();
     qWarning() << "[dock-lyrics] lyricsReady src=" << source << "lines=" << m_lyricLines.size();
     if (m_hasLyrics)
-        setStateText(source == QLatin1String("online") ? QStringLiteral("在线歌词")
-                                                       : QStringLiteral("本地歌词"));
+        setStateText(source == QLatin1String("local") ? QStringLiteral("本地歌词")
+                                                      : QStringLiteral("在线歌词"));
     else
         setStateText(QStringLiteral("没有找到歌词"));
 

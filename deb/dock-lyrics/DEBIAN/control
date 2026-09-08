@@ -9,5 +9,5 @@ Homepage: https://github.com/song/dock-lyrics
 Description: Lyrics boat - a dock widget showing current music lyrics
   A deepin (dde-shell) dock plugin that wakes up when a MPRIS compatible
   player starts playing, then shows the current lyric line as a gentle
-  marquee right on the taskbar. Lyrics are read from a local .lrc file
-  first, and fetched online (NetEase Cloud Music) as a fallback.
+  marquee right on the taskbar. Lyrics come from a local .lrc file first,
+  then online NetEase Cloud Music and the LRCLIB open database.

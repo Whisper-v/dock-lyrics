@@ -16,4 +16,5 @@ cp -f  "$BUILD/plugins/org.deepin.ds.dock.lyrics.so" "$PKG/usr/lib/x86_64-linux-
 cp -rf "$BUILD/packages/org.deepin.ds.dock.lyrics/." "$PKG/usr/share/dde-shell/org.deepin.ds.dock.lyrics/"
 
 dpkg-deb --build --root-owner-group "$PKG" "$ROOT/dock-lyrics_1.0.0_amd64.deb"
+rm -rf "$PKG/usr"   # drop payload copies; keep only the skeleton
 echo "package ready: $ROOT/dock-lyrics_1.0.0_amd64.deb"
