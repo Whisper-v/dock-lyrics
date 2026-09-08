@@ -1,0 +1,13 @@
+Package: dock-lyrics
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: dde-shell (>= 2.0.0), libqt6network6, libqt6dbus6
+Maintainer: song <song@deepin>
+Homepage: https://github.com/song/dock-lyrics
+Description: Lyrics boat - a dock widget showing current music lyrics
+  A deepin (dde-shell) dock plugin that wakes up when a MPRIS compatible
+  player starts playing, then shows the current lyric line as a gentle
+  marquee right on the taskbar. Lyrics are read from a local .lrc file
+  first, and fetched online (NetEase Cloud Music) as a fallback.

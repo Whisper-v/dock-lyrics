@@ -1,0 +1,14 @@
+{
+    "Plugin": {
+        "Version": "1.0",
+        "Id": "org.deepin.ds.dock.lyrics",
+        "Url": "main.qml",
+        "Parent": "org.deepin.ds.dock",
+        "Name": "Lyrics Boat",
+        "Name[zh_CN]": "歌词小舟",
+        "Name[zh_HK]": "歌詞小舟",
+        "Name[zh_TW]": "歌詞小舟",
+        "Description": "Show current music lyrics on the dock while playing",
+        "Description[zh_CN]": "播放音乐时在任务栏唤醒并滚动显示歌词"
+    }
+}
