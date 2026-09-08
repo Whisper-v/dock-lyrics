@@ -3,6 +3,7 @@
 #include <pluginfactory.h>
 
 #include <QDBusConnection>
+#include <QDir>
 #include <QDBusInterface>
 #include <QDBusArgument>
 #include <QDBusMessage>
@@ -10,6 +11,8 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QMetaType>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QVariant>
 #include <QVariantMap>
 
@@ -55,14 +58,86 @@ static bool isUsableSongTitle(const QString &raw)
 }
 
 
+namespace {
+const QStringList &themeNames()
+{
+    static const QStringList names = {
+        QStringLiteral("跟随系统"),
+        QStringLiteral("柠檬黄"),
+        QStringLiteral("苹果青"),
+        QStringLiteral("冰川蓝"),
+        QStringLiteral("霓虹紫"),
+        QStringLiteral("樱花粉"),
+        QStringLiteral("暖阳橙"),
+    };
+    return names;
+}
+const QStringList &themeColors()
+{
+    static const QStringList colors = {
+        QString(),                    // follow system palette
+        QStringLiteral("#FFD75E"),   // lemon yellow
+        QStringLiteral("#7EE0A3"),   // apple green
+        QStringLiteral("#8FD3FF"),   // glacier blue
+        QStringLiteral("#C792EA"),   // neon purple
+        QStringLiteral("#FF9EC7"),   // sakura pink
+        QStringLiteral("#FFB877"),   // sunset orange
+    };
+    return colors;
+}
+QString themeConfigPath()
+{
+    // ~/.config/deepin/dock-lyrics.conf
+    return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+           + QLatin1String("/deepin/dock-lyrics.conf");
+}
+int loadColorTheme()
+{
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    return qBound(0, s.value(QStringLiteral("ui/colorTheme"), 0).toInt(),
+                  themeNames().size() - 1);
+}
+void saveColorTheme(int index)
+{
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    s.setValue(QStringLiteral("ui/colorTheme"), index);
+    s.sync();
+}
+} // namespace
+
 LyricsApplet::LyricsApplet(QObject *parent)
     : DApplet(parent)
     , m_fetcher(new LyricsFetcher(this))
 {
+    m_colorTheme = loadColorTheme();
     m_posTimer.setInterval(200);
     connect(&m_posTimer, &QTimer::timeout, this, &LyricsApplet::updateLineForPosition);
     connect(m_fetcher, &LyricsFetcher::lyricsReady, this, &LyricsApplet::onLyricsReady);
     connect(m_fetcher, &LyricsFetcher::fetchFailed, this, &LyricsApplet::onLyricsFailed);
+}
+
+QStringList LyricsApplet::colorThemeNames() const
+{
+    return themeNames();
+}
+
+QStringList LyricsApplet::colorThemeColors() const
+{
+    return themeColors();
+}
+
+void LyricsApplet::setColorTheme(int index)
+{
+    const int clamped = qBound(0, index, themeNames().size() - 1);
+    if (clamped == m_colorTheme)
+        return;
+    m_colorTheme = clamped;
+    saveColorTheme(m_colorTheme);
+    qWarning() << "[dock-lyrics] color theme ->" << m_colorTheme
+               << themeNames().value(m_colorTheme);
+    emit colorThemeChanged();
 }
 
 bool LyricsApplet::load()
@@ -430,6 +505,7 @@ void LyricsApplet::requestLyricsForCurrentSong()
     m_line.clear();
     m_synced = false;
     m_hasLyrics = false;
+    m_lyricSource.clear();
 
     if (m_lyricCache.contains(key)) {
         const QString src = m_lyricSourceCache.value(key, QStringLiteral("local"));
@@ -458,6 +534,7 @@ void LyricsApplet::onLyricsReady(const QString &key, const QString &source, cons
     m_loadingLyrics = false;
     m_lyricCache.insert(key, lrcText);
     m_lyricSourceCache.insert(key, source);
+    m_lyricSource = source;
 
     QStringList plain;
     const QVector<lrc::Line> parsed = lrc::parseLrc(lrcText, &plain);
@@ -492,6 +569,7 @@ void LyricsApplet::onLyricsFailed(const QString &key)
         return;
     m_loadingLyrics = false;
     m_lyricFailed.insert(key, true);
+    m_lyricSource.clear();
     m_hasLyrics = false;
     m_lyricLines.clear();
     m_lines.clear();

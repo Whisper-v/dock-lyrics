@@ -31,6 +31,10 @@ class LyricsApplet : public DApplet
     Q_PROPERTY(bool hasLyrics READ hasLyrics NOTIFY lyricsChanged)
     Q_PROPERTY(bool loadingLyrics READ loadingLyrics NOTIFY lyricsChanged)
     Q_PROPERTY(QString stateText READ stateText NOTIFY stateTextChanged)
+    Q_PROPERTY(int colorTheme READ colorTheme WRITE setColorTheme NOTIFY colorThemeChanged)
+    Q_PROPERTY(QStringList colorThemeNames READ colorThemeNames CONSTANT)
+    Q_PROPERTY(QStringList colorThemeColors READ colorThemeColors CONSTANT)
+    Q_PROPERTY(QString lyricSource READ lyricSource NOTIFY lyricsChanged)
 
 public:
     explicit LyricsApplet(QObject *parent = nullptr);
@@ -52,6 +56,11 @@ public:
     bool hasLyrics() const { return m_hasLyrics; }
     bool loadingLyrics() const { return m_loadingLyrics; }
     QString stateText() const { return m_stateText; }
+    int colorTheme() const { return m_colorTheme; }
+    void setColorTheme(int index);
+    QStringList colorThemeNames() const;
+    QStringList colorThemeColors() const;
+    QString lyricSource() const { return m_lyricSource; }
 
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
@@ -65,6 +74,7 @@ Q_SIGNALS:
     void lineChanged();
     void lyricsChanged();
     void stateTextChanged();
+    void colorThemeChanged();
 
 protected Q_SLOTS:
     void onNameOwnerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
@@ -117,6 +127,8 @@ private:
     int m_currentIndex = -1;
     QString m_line;
     QString m_stateText;
+    QString m_lyricSource;
+    int m_colorTheme = 0;
 
     QString m_lyricKey;                // song key the current lyrics belong to
     QHash<QString, QString> m_lyricCache;
