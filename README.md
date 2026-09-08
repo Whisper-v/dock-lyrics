@@ -134,6 +134,9 @@ netease: no confident match…lrclib   网易云无匹配，降级到 LRCLIB
 lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种来源）
 ```
 
+> 🐞 **发现播放器不兼容？** 完整的排查流程、命令与症状对照表见
+> [`docs/debugging-guide.md`](docs/debugging-guide.md)。
+
 ### 交互协议
 
 - 通过 D-Bus 监听 `NameOwnerChanged`（播放器注册/退出）与 `PropertiesChanged`（`PlaybackStatus`、`Metadata`、`Position`）。
@@ -198,6 +201,9 @@ Chromium 内核播放器偶尔会把页面标题当媒体标题上报，插件�
 
 **想自定义位置？**
 在 `package/main.qml` 修改 `dockOrder`（当前 21，落在任务栏右侧托盘区）后重新构建安装。
+
+**发现新播放器不兼容（不显示/不同步/找不到歌词）？**
+按 [`docs/debugging-guide.md`](docs/debugging-guide.md) 的“四层定位法”排查：先看日志走到哪一层，再对症状表处理。
 
 ## 📄 许可与致谢
 
