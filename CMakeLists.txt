@@ -26,4 +26,4 @@ target_link_libraries(dock-lyrics PRIVATE
     Qt6::DBus
 )
 
-ds_install_package(PACKAGE org.deepin.ds.dock.lyrics TARGET dock-lyrics)
+ds_install_package(PACKAGE com.github.dock-lyrics TARGET dock-lyrics)

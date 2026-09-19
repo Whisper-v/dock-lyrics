@@ -1,11 +1,11 @@
-Package: dock-lyrics
+Package: com.github.dock-lyrics
 Version: 1.0.0
 Section: utils
 Priority: optional
 Architecture: amd64
 Depends: dde-shell (>= 2.0.0), libqt6network6, libqt6dbus6
 Maintainer: song <song@deepin>
-Homepage: https://github.com/song/dock-lyrics
+Homepage: https://github.com/Whisper-v/dock-lyrics
 Description: Lyrics boat - a dock widget showing current music lyrics
   A deepin (dde-shell) dock plugin that wakes up when a MPRIS compatible
   player starts playing, then shows the current lyric line as a gentle

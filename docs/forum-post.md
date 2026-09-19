@@ -71,11 +71,11 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 ### 方式一：安装 .deb（推荐）
 
-**v1.0.0 下载：** `dock-lyrics_1.0.0_amd64.deb`（本贴附件 / GitHub Release）
+**v1.0.0 下载：** `com.github.dock-lyrics_1.0.0_amd64.deb`（本贴附件 / GitHub Release）
 
 ```bash
-wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.0.0/dock-lyrics_1.0.0_amd64.deb
-sudo dpkg -i dock-lyrics_1.0.0_amd64.deb
+wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.0.0/com.github.dock-lyrics_1.0.0_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
 # 如提示依赖缺失
 sudo apt -f install
 ```
@@ -96,7 +96,7 @@ systemctl --user restart dde-shell@DDE.service
 ### 卸载
 
 ```bash
-sudo dpkg -r dock-lyrics            # deb 方式
+sudo dpkg -r com.github.dock-lyrics            # deb 方式
 systemctl --user restart dde-shell@DDE.service
 ```
 
@@ -147,8 +147,8 @@ docs/                        截图与调试指南
 
 安装到系统后的关键文件：
 
-- `/usr/lib/x86_64-linux-gnu/dde-shell/org.deepin.ds.dock.lyrics.so`（C++ 后端）
-- `/usr/share/dde-shell/org.deepin.ds.dock.lyrics/`（`main.qml` + `metadata.json`）
+- `/usr/lib/x86_64-linux-gnu/dde-shell/com.github.dock-lyrics.so`（C++ 后端）
+- `/usr/share/dde-shell/com.github.dock-lyrics/`（`main.qml` + `metadata.json`）
 
 ## 🛠️ 技术实现与播放器接入
 
@@ -157,7 +157,7 @@ docs/                        截图与调试指南
 ```
 ┌────────────────────────────── dde-shell（DDE）─────────────────────────────┐
 │  Dock (org.deepin.ds.dock)                                                   │
-│   └─ AppletItem 歌词小舟 (org.deepin.ds.dock.lyrics, dockOrder=21)           │
+│   └─ AppletItem 歌词小舟 (com.github.dock-lyrics, dockOrder=21)           │
 │        package/main.qml   跑马灯 UI · 均衡器 · 点击/悬停交互                   │
 │              ▲ 播放/歌词/行/状态 (Applet.* 属性)                                │
 │        src/lyricsapplet.*  DApplet 后端                                       │
@@ -267,7 +267,7 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 - 开源协议：**GPL-3.0**（OSI 批准，LICENSE 全文在仓库）
 - 独立仓库，可单独构建安装；仓库自带 mock 播放器与完整调试指南
 - 📦 v1.0.0 Release（含 .deb）：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.0.0
-- SHA-256：`a4bc6e4c19c4a321bc2d7a8b11964db1f852a7a63ff29328b6e6b95082b23b1b`
+- SHA-256：`965496ed70688f5ea3851a4eaf05fc72f9bc844492cf446df3d46d7f0936816f`
 
 ## 🗓️ 未来计划
 

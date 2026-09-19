@@ -39,8 +39,8 @@
 仓库提供打包脚本，构建并安装：
 
 ```bash
-bash deb/build-deb.sh                 # 生成 dock-lyrics_1.0.0_amd64.deb
-sudo dpkg -i dock-lyrics_1.0.0_amd64.deb
+bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.0.0_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
 ```
 
 `postinst` 会自动重启当前用户的 `dde-shell@DDE.service`，安装后无需手动操作即可看到任务栏歌词。
@@ -57,7 +57,7 @@ systemctl --user restart dde-shell@DDE.service
 ### 卸载
 
 ```bash
-sudo dpkg -r dock-lyrics              # .deb 方式卸载
+sudo dpkg -r com.github.dock-lyrics              # .deb 方式卸载
 systemctl --user restart dde-shell@DDE.service
 ```
 
@@ -109,8 +109,8 @@ cmake --build build -j"$(nproc)"
 
 产物：
 
-- `build/plugins/org.deepin.ds.dock.lyrics.so` — C++ 后端插件
-- `build/packages/org.deepin.ds.dock.lyrics/` — QML 界面 + 元数据
+- `build/plugins/com.github.dock-lyrics.so` — C++ 后端插件
+- `build/packages/com.github.dock-lyrics/` — QML 界面 + 元数据
 
 ### 安装到系统目录
 
@@ -121,8 +121,8 @@ systemctl --user restart dde-shell@DDE.service
 
 安装位置：
 
-- `/usr/lib/x86_64-linux-gnu/dde-shell/org.deepin.ds.dock.lyrics.so`
-- `/usr/share/dde-shell/org.deepin.ds.dock.lyrics/`（`main.qml` + `metadata.json`）
+- `/usr/lib/x86_64-linux-gnu/dde-shell/com.github.dock-lyrics.so`
+- `/usr/share/dde-shell/com.github.dock-lyrics/`（`main.qml` + `metadata.json`）
 
 ## 🔧 开发与调试
 
@@ -159,7 +159,7 @@ lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种�
 ```
 ┌──────────────────────────────  dde-shell（DDE）─────────────────────────────┐
 │  Dock (org.deepin.ds.dock)                                                   │
-│   └─ AppletItem 歌词小舟 (org.deepin.ds.dock.lyrics, dockOrder=21)           │
+│   └─ AppletItem 歌词小舟 (com.github.dock-lyrics, dockOrder=21)           │
 │        package/main.qml   跑马灯 UI · 均衡器 · 点击/悬停交互                   │
 │              ▲ 播放/歌词/行/状态 (Applet.* 属性)                                │
 │        src/lyricsapplet.*  DApplet 后端                                       │
@@ -186,7 +186,7 @@ src/
   qdbusutil.h            QDBusArgument(a{sv}) → QVariantMap 解码工具
 deb/
   build-deb.sh           一键打包 .deb
-  dock-lyrics/           deb 包骨架（DEBIAN/control、postinst）
+  com.github.dock-lyrics/  deb 包骨架（DEBIAN/control、postinst）
 tools/
   mpris_mock.py          MPRIS 模拟播放器（无播放器时用于体验/开发）
 docs/                    截图与文档
