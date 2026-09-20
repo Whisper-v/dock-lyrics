@@ -43,6 +43,10 @@ bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.0.0_amd6
 sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
 ```
 
+> 打包是**可复现**的：包内文件时间戳固定为 `SOURCE_DATE_EPOCH`（默认取 HEAD 提交时间），
+> 因此同一提交重复构建会得到**逐字节一致**的 `.deb`；如需自定义可显式覆盖，如
+> `SOURCE_DATE_EPOCH=0 bash deb/build-deb.sh`。
+
 `postinst` 会自动重启当前用户的 `dde-shell@DDE.service`，安装后无需手动操作即可看到任务栏歌词。
 
 ### 方式二：源码安装
