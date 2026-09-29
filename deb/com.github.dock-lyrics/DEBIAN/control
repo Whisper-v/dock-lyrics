@@ -1,5 +1,5 @@
 Package: com.github.dock-lyrics
-Version: 1.0.0
+Version: 1.1.0
 Section: utils
 Priority: optional
 Architecture: amd64
@@ -7,7 +7,8 @@ Depends: dde-shell (>= 2.0.0), libqt6network6, libqt6dbus6
 Maintainer: song <song@deepin>
 Homepage: https://github.com/Whisper-v/dock-lyrics
 Description: Lyrics boat - a dock widget showing current music lyrics
-  A deepin (dde-shell) dock plugin that wakes up when a MPRIS compatible
-  player starts playing, then shows the current lyric line as a gentle
-  marquee right on the taskbar. Lyrics come from a local .lrc file first,
-  then online NetEase Cloud Music and the LRCLIB open database.
+ A deepin (dde-shell) dock plugin that wakes up when a MPRIS compatible
+ player starts playing, then shows the current lyric line as a gentle
+ marquee right on the taskbar. Lyrics are looked up in five stages:
+ local .lrc files first, then the online databases of NetEase Cloud
+ Music, Kugou, QQ Music and finally the open LRCLIB database.

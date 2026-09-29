@@ -15,7 +15,7 @@
 |---|---|---|---|
 | L1 发现层 | `lyricsapplet.cpp` 的 `NameOwnerChanged` / `scanPlayers`，`playerprobe.cpp` | 播放器注册到 D-Bus 被插件看到 | 日志里完全没有该播放器的 `addPlayer`；或重启播放器后歌词条无反应 |
 | L2 状态层 | `lyricsapplet.cpp` 的 `PlayerState`、`qdbusutil.h` 的解包 | 播放/暂停/切歌/seek 的元数据与位置 | 标题为空/是 URL、切歌不更新、拖进度条不同步、进度从 0 起、暂停后不恢复 |
-| L3 取词层 | `lyricsfetcher.cpp`（local → 网易云 → LRCLIB） | 歌名匹配到歌词文本 | 一直“没有找到歌词”、歌词张冠李戴、匹配到翻唱/同名歌 |
+| L3 取词层 | `lyricsfetcher.cpp`（local → 网易云 → 酷狗 → QQ → LRCLIB） | 歌名匹配到歌词文本 | 一直“没有找到歌词”、歌词张冠李戴、匹配到翻唱/同名歌 |
 | L4 显示层 | `package/main.qml` 跑马灯 | 歌词文本滚动显示 | 一般与播放器无关，多为布局/主题问题 |
 
 **定位口诀**：先看日志有没有走到对应节点，再决定改哪一层，不要一上来就改匹配算法。
@@ -130,9 +130,9 @@ dbus-send --session --print-reply --dest=<BUS> /org/mpris/MediaPlayer2 \
 | `active xxx status Playing title=…` | 播放/暂停切换 | 状态与真实不符 → L2 |
 | `song changed -> fetch lyrics for …` | 判定切歌并开始取词 | 切歌了却没这行 → L2：Metadata 变化没被识别 |
 | `seeked to N ms` | 收到 `Seeked` | 拖了进度条却没这行 → L2：播放器不发 Seeked |
-| `netease: no confident match / empty lyric, fallback to lrclib` | 网易云失败，转 LRCLIB | 两个都失败才真没有歌词 |
-| `lyricsReady src= local/netease/lrclib lines= N` | 取到歌词 | 说明 L3 正常 |
-| `all lyric sources failed for key …` | 三个来源全失败 | UI 显示“没有找到歌词” |
+| `netease: … try kugou` / `kugou: … try qq` / `qq: … fallback to lrclib` | 在线曲库逐级降级（网易云→酷狗→QQ→LRCLIB） | 逐级都失败才真没有歌词 |
+| `lyricsReady src= local/netease/kugou/qq/lrclib lines= N` | 取到歌词 | 说明 L3 正常 |
+| `all lyric sources failed for key …` | 五个来源全失败 | UI 显示“没有找到歌词” |
 | `retry failed lyric lookup on resume: …` | 暂停→播放时对失败歌曲重试 | 重试仍失败才会继续“找不到” |
 
 ---
@@ -146,17 +146,18 @@ dbus-send --session --print-reply --dest=<BUS> /org/mpris/MediaPlayer2 \
 1. `§2.2` 确认播放器确实注册了 MPRIS 名字。
 2. 看日志有没有该名字的 `addPlayer`。
 3. 没有 → 确认它注册在 session bus 而非 system bus；部分沙箱应用（flatpak/snap）总线隔离，属播放器侧限制。
-4. 播放器在**播放中**才可能成为 active（`chooseActivePlayer` 只认 `Playing` 且最近活跃者）。暂停时歌词条收起是设计行为，别误判。
+4. 播放器在**播放中**才可能成为 active（`chooseActivePlayer` 只认 `Playing` 且最近活跃者）。v1.1 起**暂停也会驻留**（`hasActivePlayer`），只有播放器退出才收起。
 
 ### B. 一直“没有找到歌词” —— L3
 
 先按顺序排除：
 
 1. **本地 `.lrc`**：检查歌词是否在 `~/Music`、`~/音乐`、`~/Music/QQMusic`、`~/Music/网易云音乐`、`~/Music/CloudMusic` 等目录（源码 `findLocalLrc()` 里有一份完整目录清单），命名用 `歌名.lrc` 或 `歌手 - 歌名.lrc`。
-2. **网易云**：日志出现 `netease: no confident match` 说明该曲网易云**无版权或无匹配**（如周杰伦，网易已下架）。这是预期行为，不是 Bug。
-3. **LRCLIB**：日志出现 `lrclib: no match` 说明开放曲库也没有，可能曲子太冷门。
-4. 三个来源都失败（`all lyric sources failed`）且网络正常 → 报给开发者并附 §6 的探针数据。
-5. 若是**之前失败、后来网络恢复**：暂停再播放即可触发自动重试（`m_lyricFailed` 按歌曲 key 缓存，`resume` 时清除并重试）。
+2. **网易云**：日志出现 `netease: no confident match` 说明该曲网易云**无版权或无匹配**（如周杰伦，网易已下架）。这是预期行为，不是 Bug——插件会自动降级到酷狗。
+3. **酷狗 / QQ 音乐**：看到 `kugou: … try qq` 说明酷狗也未命中，继续降级 QQ 音乐；两条都失败才会去 LRCLIB。
+4. **LRCLIB**：日志出现 `lrclib: no match` 说明开放曲库也没有，可能曲子太冷门（或关键词被污染）。
+5. 五个来源都失败（`all lyric sources failed`）且网络正常 → 报给开发者并附 §6 的探针数据。
+6. 若是**之前失败、后来网络恢复**：暂停再播放即可触发自动重试（`m_lyricFailed` 按歌曲 key 缓存，`resume` 时清除并重试）。
 
 ### C. 同一播放器内切歌，歌词不更新 —— L2（历史 Bug）
 
@@ -205,7 +206,7 @@ dbus-send --session --print-reply --dest=<BUS> /org/mpris/MediaPlayer2 \
 - 根因：网易云接口按关键词返回一堆同名/翻唱，旧逻辑匹配过松，选了错误封面歌
   （如“我爱你 by 周杰伦♚”这种翻唱）。
 - 现修复：**严格匹配**——歌名完全相同，或“歌名包含 + 歌手完全相同”才采信；
-  否则 `netease: no confident match, fallback to lrclib`。
+  否则 `netease: no confident match, try kugou`（并继续向酷狗/QQ/LRCLIB 降级）。
 - 排查新来源/新播放器时：若歌词不对，先看日志里 `requestLyrics key= 歌名␟歌手`
   的 key 是否真确；再确认网易与 LRCLIB 各自匹配到了哪首。
 
@@ -267,8 +268,8 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 - **多实例 Chromium**：多个页面/窗口各占一个 MPRIS 名字且都叫 `chromium.instance*`，
   插件无法判断哪个在发声，只认“Playing 且最近活跃”。
 - **纯音乐/播客/无词曲**：任何来源都取不到词属正常。
-- **在线歌词依赖网络**：网易云（`music.163.com`）与 LRCLIB（`lrclib.net`）不可达时
-  只有本地 `.lrc` 可用。
+- **在线歌词依赖网络**：网易云（`music.163.com`）、酷狗（`kugou.com`）、QQ 音乐（`y.qq.com`）
+  与 LRCLIB（`lrclib.net`）任一不可达时，会自动跳到下一级来源；全部不可达则只有本地 `.lrc` 可用。
 
 ---
 

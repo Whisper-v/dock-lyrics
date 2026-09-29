@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/icon.png" width="160" alt="歌词小舟 dock-lyrics logo">
+</p>
+
 # 🎵 歌词小舟 dock-lyrics
 
 > 一个运行在 **Deepin (dde-shell)** 任务栏上的歌词插件：检测到音乐开始播放时自动唤醒，
@@ -9,20 +13,24 @@
 
 ## ✨ 功能特性
 
-- **播放唤醒**：监听 MPRIS（`org.mpris.MediaPlayer2.*`），任一兼容播放器开始播放即自动出现歌词条；暂停/停止后自动收起。
+- **播放唤醒**：监听 MPRIS（`org.mpris.MediaPlayer2.*`），任一兼容播放器开始播放即自动出现歌词条；**只要播放器还在，暂停也会驻留**（切歌不闪退），播放器退出才安静收起。
 - **同步歌词跑马灯**：按歌曲进度实时切换当前行，超长歌词平滑滚动；深色/浅色任务栏与深浅主题均清晰可读。
-- **三级歌词来源**：
+- **五级歌词来源**：
   1. 本地 `.lrc`（音乐文件旁的 sidecar，或 `~/Music`、`~/音乐` 等目录）；
   2. 网易云音乐曲库（`music.163.com`，带匹配校验，避免串词）；
-  3. **LRCLIB 开放歌词库**（`lrclib.net`）兜底——网易云没有版权的歌曲（如周杰伦等）也能命中。
-- **动画均衡器**：歌词条左侧 3 根音柱随播放律动。
+  3. **酷狗音乐**（`kugou.com`，支持 KRC 歌词）；
+  4. **QQ 音乐**（`y.qq.com`）；
+  5. **LRCLIB 开放歌词库**（`lrclib.net`）兜底——前面几家的曲库都捞不到时，仍有机会命中。
+- **动画均衡器**：歌词条左侧 3 根音柱随播放律动（竖排任务栏时即以此图标形态驻留）。
 - **点击控制 / 悬停详情**：单击歌词条播放⇄暂停；悬停气泡显示 歌名 / 歌手 / 当前句 / 歌词来源（本地歌词或在线歌词）。
 - **🎨 颜色主题**：11 套预设 —— **跟随系统** + 6 套高亮彩色（柠檬黄 / 苹果青 / 冰川蓝 / 霓虹紫 / 樱花粉 / 暖阳橙）+
   **4 套深色主题（曜石黑 / 深空蓝 / 暮光紫 / 墨夜绿）**：深色主题自带深色半透明胶囊底，
   在浅色任务栏上也清晰可读；另有 **自定义配色**，可分别设置**字体颜色**与**背景颜色**
   （各十余种色板，支持带透明度的深/浅背景）。文字与均衡器音柱同步换色，选择持久化到 `~/.config/deepin/dock-lyrics.conf`。
-- **🖱️ 右键菜单**：歌词条上右键即可 **播放/暂停、上一曲、下一曲、颜色主题、刷新歌词**，
-  并实时显示当前歌词来源（本地文件 / 网易云音乐 / LRCLIB）。
+- **🖱️ 右键菜单**：歌词条上右键即可 **播放/暂停、上一曲、下一曲、显示位置、颜色主题、刷新歌词**，
+  并实时显示当前歌词来源（本地文件 / 网易云音乐 / 酷狗 / QQ 音乐 / LRCLIB）。
+- **📍 任务栏左右可选**：右键「显示位置」可在**任务栏左侧**（默认，紧跟左侧插件之后）与**右侧**托盘区之间切换，选择持久化保存。
+- **更宽的歌词窗**：文字区较上一版加宽 50%，长句滚动更从容、单屏可见字数更多。
 - **任意位置任务栏**：任务栏在屏幕上下方时显示完整跑马灯歌词；在左右两侧（竖排）时自动收起为均衡器图标。
 - **真实播放器可用**：已实测 **QQ 音乐（桌面版/Chromium 内核）**、Deepin 音乐、VLC 等 MPRIS 播放器与本地模拟器。
 
@@ -39,8 +47,8 @@
 仓库提供打包脚本，构建并安装：
 
 ```bash
-bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.0.0_amd64.deb
-sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
+bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.1.0_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
 ```
 
 > 打包是**可复现**的：包内文件时间戳固定为 `SOURCE_DATE_EPOCH`（默认取 HEAD 提交时间），
@@ -88,9 +96,11 @@ systemctl --user restart dde-shell@DDE.service
 | --- | --- | --- |
 | 1 | **本地 `.lrc`** | ① 正在播放的本地文件旁同名 `.lrc`；② `~/Music`、`~/音乐`、`~/Music/Lyrics`、`~/音乐/歌词` 下常见命名（`歌名.lrc`、`歌手 - 歌名.lrc` 等） |
 | 2 | **网易云音乐** | 搜索命中并做“标题精确 + 歌手匹配”校验，**只取高置信度结果**，避免串到翻唱/无关歌曲 |
-| 3 | **LRCLIB** | 网易云检索失败或歌词为空时自动降级；优先取带时间轴的 `syncedLyrics`，否则取纯文本逐行翻页显示 |
+| 3 | **酷狗音乐** | 网易云无匹配时降级；走酷狗搜索接口 + `krcs` 取词（KRC 歌词可解析时间轴） |
+| 4 | **QQ 音乐** | 酷狗未命中时降级；QQ 音乐搜索接口取 `songmid` 后拉取歌词 |
+| 5 | **LRCLIB** | 以上在线曲库全部失败时兜底；优先取带时间轴的 `syncedLyrics`，否则取纯文本逐行翻页显示 |
 
-所有来源都找不到时，歌词条会退化为显示「歌名 - 歌手」并提示“没有找到歌词”。
+五个来源都找不到时，歌词条会退化为显示「歌名 - 歌手」并提示“没有找到歌词”。
 **此时暂停再继续播放即可自动重试**（或重启 dde-shell 后切歌）。
 
 > 小贴士：为本地歌曲放一个同名的 `.lrc` 即可 100% 命中本地歌词（无需联网）。
@@ -143,7 +153,7 @@ addPlayer  …                         发现新 MPRIS 播放器
 readPlayerState OK … title= 晴天      读取到播放器元数据
 song changed -> fetch lyrics for …   切歌，开始取歌词
 netease: no confident match…lrclib   网易云无匹配，降级到 LRCLIB
-lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种来源）
+lyricsReady src= "kugou" lines= 52   拿到歌词（local/netease/kugou/qq/lrclib 五种来源）
 ```
 
 > 🐞 **发现播放器不兼容？** 完整的排查流程、命令与症状对照表见
@@ -163,12 +173,12 @@ lyricsReady src= "lrclib" lines= 52  拿到歌词（local/netease/lrclib 三种�
 ```
 ┌──────────────────────────────  dde-shell（DDE）─────────────────────────────┐
 │  Dock (org.deepin.ds.dock)                                                   │
-│   └─ AppletItem 歌词小舟 (com.github.dock-lyrics, dockOrder=21)           │
+│   └─ AppletItem 歌词小舟 (com.github.dock-lyrics, dockOrder=21/10)         │
 │        package/main.qml   跑马灯 UI · 均衡器 · 点击/悬停交互                   │
 │              ▲ 播放/歌词/行/状态 (Applet.* 属性)                                │
 │        src/lyricsapplet.*  DApplet 后端                                       │
 │              ├─ playerprobe.*   每个播放器的 PropertiesChanged 探测            │
-│              ├─ lyricsfetcher.* 本地查找 → 网易云 → LRCLIB                     │
+│              ├─ lyricsfetcher.* 本地 → 网易云 → 酷狗 → QQ → LRCLIB              │
 │              └─ lrcparser.*     LRC 时间轴解析/元数据行过滤                     │
 └──────────────────────────────────────────────────────────────────────────────┘
                ▲ 用户总线 (session bus) D-Bus · MPRIS
@@ -185,7 +195,7 @@ package/
 src/
   lyricsapplet.*         DApplet 后端：MPRIS 监听、活动播放器决策、歌词状态机
   playerprobe.*          逐播放器 PropertiesChanged 探测（含播放器重启重连）
-  lyricsfetcher.*        本地 lrc 查找 + 网易云 + LRCLIB 在线获取
+  lyricsfetcher.*        本地 lrc 查找 + 网易云 / 酷狗 / QQ / LRCLIB 在线获取
   lrcparser.*            LRC 时间轴解析 / 元数据行过滤
   qdbusutil.h            QDBusArgument(a{sv}) → QVariantMap 解码工具
 deb/
@@ -193,13 +203,13 @@ deb/
   com.github.dock-lyrics/  deb 包骨架（DEBIAN/control、postinst）
 tools/
   mpris_mock.py          MPRIS 模拟播放器（无播放器时用于体验/开发）
-docs/                    截图与文档
+docs/                    截图、图标（icon.png）与文档
 ```
 
 ## ❓ 常见问题
 
 **任务栏没有出现歌词条？**
-确认插件已安装并重启 dde-shell：`systemctl --user restart dde-shell@DDE.service`；确认播放器正在“播放”（暂停时歌词条会收起，这是设计行为）；确认任务栏还有空间容纳该部件。
+确认插件已安装并重启 dde-shell：`systemctl --user restart dde-shell@DDE.service`；确认播放器正在“播放”（暂停时歌词条会驻留；只有播放器退出才会收起）；确认任务栏还有空间容纳该部件。
 
 **播放 QQ 音乐提示“找不到歌词”？**
 这通常是 QQ 音乐**自身**的歌词面板提示。对本插件而言，若 QQ 音乐某首歌本地无 `.lrc`、网易云又无版权，会经 LRCLIB 兜底取词（周杰伦等曲库基本可命中）。若仍失败，可把歌词存成 `~/Music/歌名.lrc`；或暂停再播放触发自动重试。
@@ -213,18 +223,32 @@ Chromium 内核播放器偶尔会把页面标题当媒体标题上报，插件�
 规范 MPRIS 播放器（Deepin 音乐、VLC、foobar2000、mpris 桥等）发 `Seeked` 或更新 `Position`，均可实时同步拖动。
 
 **在线歌词需要联网吗？**
-仅“在线歌词”需要：请保证可访问 `music.163.com` 与 `lrclib.net`。本地 `.lrc` 完全离线可用。
+仅“在线歌词”需要：请保证可访问 `music.163.com`、`kugou.com`、`y.qq.com` 与 `lrclib.net`。本地 `.lrc` 完全离线可用。
 
-**想自定义位置？**
-在 `package/main.qml` 修改 `dockOrder`（当前 21，落在任务栏右侧托盘区）后重新构建安装。
+**歌词条显示在任务栏哪一侧？**
+在歌词条上**右键 → 显示位置**，即可在「任务栏左侧」（默认，`dockOrder=10`，排在左侧插件之后）与「任务栏右侧」（`dockOrder=21`，托盘区起始位）之间切换，选择会记住。
+进阶：也可直接改 `package/main.qml` 里的 `dockOrder` 后重新构建安装。
 
 **发现新播放器不兼容（不显示/不同步/找不到歌词）？**
 按 [`docs/debugging-guide.md`](docs/debugging-guide.md) 的“四层定位法”排查：先看日志走到哪一层，再对症状表处理。
 
+## 🆕 更新日志
+
+**v1.1.0**
+- 歌词来源扩到 **五级**：新增**酷狗音乐**与 **QQ 音乐**在线曲库，LRCLIB 退居最后兜底。
+- 新增 **右键「显示位置」**：任务栏**左侧 / 右侧**一键切换并记忆。
+- **暂停驻留**：播放器存活期间暂停也不再收起（`hasActivePlayer`），只在播放器退出时隐藏。
+- 歌词文字区自适应加宽 50%，长句显示更完整。
+- 项目新增图标（`docs/icon.png`），随包安装为应用图标。
+
+**v1.0.0**
+- 首个版本：MPRIS 播放唤醒、歌词跑马灯、本地 `.lrc` + 网易云 + LRCLIB 五级来源、12 套配色（含深色与自定义）、seek 同步、右键控制菜单。
+
 ## 📄 许可与致谢
 
 - 代码：**GPL-3.0**（见 [LICENSE](LICENSE)）
-- 在线歌词来源：网易云音乐开放搜索接口（仅个人学习测试）、**LRCLIB**（[lrclib.net](https://lrclib.net)，开放公共歌词库）
-- 图标与 UI 基于 DTK / deepin 控件库
+- 在线歌词来源：网易云音乐、酷狗音乐、QQ 音乐的开放搜索接口（仅个人学习测试）、**LRCLIB**（[lrclib.net](https://lrclib.net)，开放公共歌词库）
+- 项目图标：`docs/icon.png`（同时作为应用图标安装到 `/usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png`）
+- UI 基于 DTK / deepin 控件库
 
 > 本项目为 Deepin 开发者（插件）竞赛作品：**歌词小舟** —— 让歌词安静地泊在任务栏上。

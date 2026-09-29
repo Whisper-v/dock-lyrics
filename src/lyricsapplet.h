@@ -38,6 +38,8 @@ class LyricsApplet : public DApplet
     Q_PROPERTY(QString customTextColor READ customTextColor WRITE setCustomTextColor NOTIFY customColorChanged)
     Q_PROPERTY(QString customBgColor READ customBgColor WRITE setCustomBgColor NOTIFY customColorChanged)
     Q_PROPERTY(QString lyricSource READ lyricSource NOTIFY lyricsChanged)
+    Q_PROPERTY(bool hasActivePlayer READ hasActivePlayer NOTIFY activePlayerChanged)
+    Q_PROPERTY(int dockSide READ dockSide WRITE setDockSide NOTIFY dockSideChanged)
 
 public:
     explicit LyricsApplet(QObject *parent = nullptr);
@@ -69,6 +71,9 @@ public:
     QString customBgColor() const { return m_customBgColor; }
     void setCustomBgColor(const QString &color);
     QString lyricSource() const { return m_lyricSource; }
+    bool hasActivePlayer() const { return !m_activeService.isEmpty(); }
+    int dockSide() const { return m_dockSide; }
+    void setDockSide(int side);
 
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
@@ -84,6 +89,8 @@ Q_SIGNALS:
     void stateTextChanged();
     void colorThemeChanged();
     void customColorChanged();
+    void activePlayerChanged();
+    void dockSideChanged();
 
 protected Q_SLOTS:
     void onNameOwnerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
@@ -138,6 +145,7 @@ private:
     QString m_stateText;
     QString m_lyricSource;
     int m_colorTheme = 0;
+    int m_dockSide = 1;   // default: left side of the taskbar
     QString m_customTextColor;
     QString m_customBgColor;
 

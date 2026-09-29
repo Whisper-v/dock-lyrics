@@ -10,7 +10,7 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PKG="$ROOT/deb/com.github.dock-lyrics"
 BUILD="$ROOT/build"
-OUT="$ROOT/com.github.dock-lyrics_1.0.0_amd64.deb"
+OUT="$ROOT/com.github.dock-lyrics_1.1.0_amd64.deb"
 
 # sanity: require a fresh build
 [ -f "$BUILD/plugins/com.github.dock-lyrics.so" ] || { echo "build first: cmake --build build"; exit 1; }
@@ -26,10 +26,14 @@ export SOURCE_DATE_EPOCH
 echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH ($(date -d "@$SOURCE_DATE_EPOCH" '+%F %T %Z' 2>/dev/null || echo 'unix epoch'))"
 
 rm -rf "$PKG/usr"
-mkdir -p "$PKG/usr/lib/x86_64-linux-gnu/dde-shell" "$PKG/usr/share/dde-shell/com.github.dock-lyrics"
+mkdir -p "$PKG/usr/lib/x86_64-linux-gnu/dde-shell" \
+         "$PKG/usr/share/dde-shell/com.github.dock-lyrics" \
+         "$PKG/usr/share/icons/hicolor/256x256/apps"
 
 cp -f  "$BUILD/plugins/com.github.dock-lyrics.so" "$PKG/usr/lib/x86_64-linux-gnu/dde-shell/"
 cp -rf "$BUILD/packages/com.github.dock-lyrics/." "$PKG/usr/share/dde-shell/com.github.dock-lyrics/"
+# package icon (also used as the project logo in docs/icon.png)
+install -m 644 "$ROOT/docs/icon.png" "$PKG/usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png"
 
 # pin mtimes so the tarball metadata is stable as well
 find "$PKG" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +

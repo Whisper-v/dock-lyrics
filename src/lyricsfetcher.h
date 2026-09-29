@@ -8,9 +8,11 @@
 // Fetch LRC lyrics for a song.
 //   1. local .lrc sidecar files (next to the audio file / common music dirs)
 //   2. NetEase Cloud Music (music.163.com) online database
-//   3. LRCLIB (lrclib.net) open lyric database as a final fallback
+//   3. Kugou Music (kugou.com) online database
+//   4. QQ Music (c.y.qq.com) online database
+//   5. LRCLIB (lrclib.net) open lyric database as a final fallback
 // Sources are reported to the caller via the `source` argument:
-//   "local" / "netease" / "lrclib".
+//   "local" / "netease" / "kugou" / "qq" / "lrclib".
 class LyricsFetcher : public QObject
 {
     Q_OBJECT
@@ -32,6 +34,11 @@ private:
         Idle,
         NeteaseSearch,
         NeteaseLyric,
+        KugouSearch,
+        KugouKrcSearch,
+        KugouDownload,
+        QqSearch,
+        QqLyric,
         LrclibSearch,
     };
 
@@ -39,6 +46,11 @@ private:
         QString key;
         QString title;
         QString artist;
+        QString cleanTitle;   // title without version suffixes, used for matching
+        QString kugouHash;
+        QString kugouKrcId;
+        QString kugouAccessKey;
+        QString qqSongMid;
     };
 
     QString findLocalLrc(const QString &title, const QString &artist,
@@ -46,6 +58,11 @@ private:
 
     void startNeteaseSearch();
     void startNeteaseLyric(qint64 songId);
+    void startKugouSearch();
+    void startKugouKrcSearch(const QString &hash, const QString &songName);
+    void startKugouDownload(const QString &id, const QString &accessKey);
+    void startQqSearch();
+    void startQqLyric(const QString &songMid);
     void startLrclibSearch();
 
     void doGet(const QUrl &url, Stage stage);

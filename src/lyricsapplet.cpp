@@ -121,6 +121,12 @@ int loadColorTheme()
     return qBound(0, s.value(QStringLiteral("ui/colorTheme"), 0).toInt(),
                   themeNames().size() - 1);
 }
+int loadDockSide()
+{
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    return qBound(0, s.value(QStringLiteral("ui/dockSide"), 1).toInt(), 1);   // default left
+}
 void saveColorTheme(int index)
 {
     QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
@@ -163,6 +169,7 @@ LyricsApplet::LyricsApplet(QObject *parent)
     , m_fetcher(new LyricsFetcher(this))
 {
     m_colorTheme = loadColorTheme();
+    m_dockSide = loadDockSide();
     m_customTextColor = loadCustomColor(QStringLiteral("ui/textColor"));
     m_customBgColor = loadCustomColor(QStringLiteral("ui/bgColor"));
     m_posTimer.setInterval(200);
@@ -218,6 +225,20 @@ void LyricsApplet::setCustomBgColor(const QString &color)
     saveCustomColor(QStringLiteral("ui/bgColor"), m_customBgColor);
     qWarning() << "[dock-lyrics] custom bg color ->" << m_customBgColor;
     emit customColorChanged();
+}
+
+void LyricsApplet::setDockSide(int side)
+{
+    const int clamped = (side == 1) ? 1 : 0;
+    if (clamped == m_dockSide)
+        return;
+    m_dockSide = clamped;
+    QDir().mkpath(QFileInfo(themeConfigPath()).absolutePath());
+    QSettings s(themeConfigPath(), QSettings::IniFormat);
+    s.setValue(QStringLiteral("ui/dockSide"), m_dockSide);
+    s.sync();
+    qWarning() << "[dock-lyrics] dock side ->" << (m_dockSide == 1 ? "left" : "right");
+    emit dockSideChanged();
 }
 
 bool LyricsApplet::load()
@@ -442,16 +463,20 @@ void LyricsApplet::chooseActivePlayer()
         }
     }
     if (best.isEmpty()) {
-        // Keep the current one if it merely paused, otherwise clear.
-        if (!m_activeService.isEmpty() && m_players.contains(m_activeService)
-            && m_players.value(m_activeService).status != QLatin1String("Stopped")) {
-            return; // still active (paused)
-        }
+        // Keep the current player alive as long as its MPRIS service is still
+        // registered. Clearing it on "Stopped" makes the dock widget blink
+        // during automatic track changes (players report Stopped for a moment
+        // while switching to the next song). The widget only disappears when
+        // the player really quits (removePlayer clears m_activeService).
+        if (!m_activeService.isEmpty() && m_players.contains(m_activeService))
+            return;
         m_activeService.clear();
+        emit activePlayerChanged();
         return;
     }
     if (m_activeService != best) {
         m_activeService = best;
+        emit activePlayerChanged();
         // Full refresh so we get complete metadata for the newly active player.
         readPlayerState(best);
     }
@@ -517,8 +542,11 @@ void LyricsApplet::applyActivePlayer()
         emit songChanged();
 
     // (Re)load lyrics when the song actually changed.
+    // NOTE: intentionally NOT gated on m_playing - some players briefly leave
+    // the Playing state while switching tracks, and if we skipped the fetch
+    // here the lyrics would stay stale even after playback resumes.
     const QString key = currentSongKey();
-    if (songChangedNow && m_playing && !key.isEmpty() && key != m_lyricKey) {
+    if (songChangedNow && !key.isEmpty() && key != m_lyricKey) {
         qWarning() << "[dock-lyrics] song changed -> fetch lyrics for" << key;
         m_lyricKey.clear();
         requestLyricsForCurrentSong();
@@ -541,12 +569,17 @@ void LyricsApplet::startPositionClock(qint64)
 
 void LyricsApplet::updateLineForPosition()
 {
-    if (!m_playing || m_lines.isEmpty() || !m_synced)
+    if (m_lines.isEmpty() || !m_synced)
         return;
 
-    const qint64 pos = m_basePositionUs / 1000 + m_clock.elapsed();
-    m_positionMs = qBound<qint64>(0, pos, m_durationMs > 0 ? m_durationMs : pos);
-    emit positionChanged();
+    // While playing, advance the internal clock; while paused the position is
+    // frozen, so reuse m_positionMs to recompute the line (e.g. a track change
+    // happened while paused).
+    if (m_playing) {
+        const qint64 pos = m_basePositionUs / 1000 + m_clock.elapsed();
+        m_positionMs = qBound<qint64>(0, pos, m_durationMs > 0 ? m_durationMs : pos);
+        emit positionChanged();
+    }
 
     // binary-ish search from current index
     int idx = m_currentIndex < 0 ? 0 : m_currentIndex;

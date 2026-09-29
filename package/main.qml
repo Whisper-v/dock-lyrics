@@ -16,8 +16,16 @@ AppletItem {
     id: root
 
     /* ---------- dock integration ---------- */
-    property int dockOrder: 21
-    property bool shouldVisible: Applet.playing
+    // dockSide: 0 = right part (default), 1 = left part
+    // dock area ranges: left (0,10], center (10,20], right (20,30]
+    // weather plugin (dde-shell-weather-plugin) was lowered to dockOrder 9
+    // so that 10 is the highest order in the left area: the lyrics pill
+    // then sits right AFTER all left plugins (search / eye / weather).
+    // right = 21 (left end of the right area)
+    property int dockOrder: Applet.dockSide === 1 ? 10 : 21
+    // stay visible while the player is alive (playing OR paused);
+    // only leave the taskbar when the music player closes.
+    property bool shouldVisible: Applet.playing || Applet.hasActivePlayer
     // Panel.position: 0 bottom / 1 right / 2 top / 3 left (odd == vertical dock)
     property bool verticalDock: Panel.position % 2 === 1
 
@@ -53,7 +61,8 @@ AppletItem {
     /* ---------- metrics ---------- */
     readonly property int dockSize: Panel.rootObject.dockSize
     readonly property real textPixel: Math.max(11, Math.round(dockSize * 0.34))
-    readonly property int textAreaWidth: Math.max(90, Math.round(dockSize * 3.6))
+    // text area widened by 50% (3.6 -> 5.4); EQ icon area keeps original width (1.1)
+    readonly property int textAreaWidth: Math.max(135, Math.round(dockSize * 5.4))
     readonly property int eqWidth: Math.round(dockSize * 1.1)
     readonly property int contentWidth: verticalDock ? dockSize : (eqWidth + textAreaWidth + 14)
 
@@ -121,6 +130,8 @@ AppletItem {
         switch (Applet.lyricSource) {
         case "local":   return qsTr("歌词来源：本地文件")
         case "netease": return qsTr("歌词来源：网易云音乐")
+        case "kugou":   return qsTr("歌词来源：酷狗音乐")
+        case "qq":      return qsTr("歌词来源：QQ音乐")
         case "lrclib":  return qsTr("歌词来源：LRCLIB")
         }
         if (Applet.hasLyrics)
@@ -382,6 +393,22 @@ AppletItem {
             }
             LP.MenuSeparator {}
 
+            LP.Menu {
+                id: positionMenu
+                title: qsTr("显示位置")
+                LP.MenuItem {
+                    text: qsTr("任务栏左侧")
+                    checkable: true
+                    checked: Applet.dockSide === 1
+                    onTriggered: Applet.dockSide = 1
+                }
+                LP.MenuItem {
+                    text: qsTr("任务栏右侧")
+                    checkable: true
+                    checked: Applet.dockSide === 0
+                    onTriggered: Applet.dockSide = 0
+                }
+            }
             LP.Menu {
                 id: themeMenu
                 title: qsTr("颜色主题")

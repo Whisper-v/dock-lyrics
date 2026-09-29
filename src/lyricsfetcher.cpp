@@ -1,5 +1,6 @@
 #include "lyricsfetcher.h"
 
+#include <QByteArray>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -16,6 +17,63 @@
 QString urlQueryEncode(const QString &s)
 {
     return QString::fromLatin1(QUrl::toPercentEncoding(s));
+}
+
+// QQ Music's fcgi endpoints wrap the JSON payload in a JSONP callback
+// (e.g. "MusicJsonCallback({...})"). Strip everything outside the braces.
+static QJsonDocument parseJsonp(const QByteArray &data)
+{
+    const int start = data.indexOf('{');
+    const int end = data.lastIndexOf('}');
+    if (start >= 0 && end > start)
+        return QJsonDocument::fromJson(data.mid(start, end - start + 1));
+    return QJsonDocument::fromJson(data);
+}
+
+// Normalize a file/artist/title name for fuzzy matching: drop spaces,
+// separators and punctuation (e.g. "周杰伦 - .水手怕水" -> "周杰伦水手怕水").
+static QString normalizeLrcName(const QString &s)
+{
+    QString n = s;
+    n.remove(QRegularExpression(QStringLiteral(
+        "[\\s\\-._《》〈〉「」『』【】（）()\\[\\]\\{\\}、，,。!！?？:：/\\\\]+")));
+    return n.toLower();
+}
+
+// Strip common version/quality suffixes like "(live)" / "(伴奏)" / "[demo]"
+// from a title so online searches can match the plain studio version.
+static QString lyricSearchTitle(const QString &title)
+{
+    QString t = title.trimmed();
+    t.remove(QRegularExpression(QStringLiteral("\\s*\\([^)]*\\)\\s*")));
+    t.remove(QRegularExpression(QStringLiteral("\\s*\\[[^\\]]*\\]\\s*")));
+    return t.trimmed();
+}
+
+// Depth-limited recursive search for a .lrc whose normalized name contains
+// the normalized title (and artist when given).
+static QString findLrcRecursive(const QString &dirPath, const QString &normTitle,
+                                const QString &normArtist, int depth)
+{
+    QDir dir(dirPath);
+    const QFileInfoList entries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    for (const QFileInfo &e : entries) {
+        if (e.isDir()) {
+            if (depth > 0) {
+                const QString found = findLrcRecursive(e.absoluteFilePath(), normTitle,
+                                                       normArtist, depth - 1);
+                if (!found.isEmpty())
+                    return found;
+            }
+        } else if (e.suffix().compare(QLatin1String("lrc"), Qt::CaseInsensitive) == 0) {
+            const QString base = normalizeLrcName(e.completeBaseName());
+            if (!base.isEmpty() && base.contains(normTitle)) {
+                if (normArtist.isEmpty() || base.contains(normArtist))
+                    return e.absoluteFilePath();
+            }
+        }
+    }
+    return QString();
 }
 
 LyricsFetcher::LyricsFetcher(QObject *parent)
@@ -36,16 +94,12 @@ void LyricsFetcher::requestLyrics(const QString &key,
 
     m_pending = { key, title, artist };
 
-    const QString local = findLocalLrc(title, artist, localUrlHint);
-    if (!local.isEmpty()) {
-        QFile f(local);
-        if (f.open(QIODevice::ReadOnly)) {
-            const QString content = QString::fromUtf8(f.readAll());
-            emit lyricsReady(key, QStringLiteral("local"), content);
-            return;
-        }
-    }
-
+    // Local .lrc loading is disabled by request: always walk the online
+    // sources (NetEase -> Kugou -> LRCLIB).
+    Q_UNUSED(localUrlHint);
+    // For matching, drop version suffixes (live / instrumental / demo ...),
+    // while the raw title stays in the key used for caching.
+    m_pending.cleanTitle = lyricSearchTitle(title);
     startNeteaseSearch();
 }
 
@@ -103,6 +157,27 @@ QString LyricsFetcher::findLocalLrc(const QString &title, const QString &artist,
                 return p;
         }
     }
+
+    // 3. recursive fuzzy search under the common music roots, so lyrics stored
+    //    in deep sub-folders (e.g. ~/Music/歌手/专辑/歌手 - .歌名.lrc) are found.
+    //    This also covers players that do not report xesam:url (e.g. DeepinMusic).
+    const QString normTitle = normalizeLrcName(title);
+    if (!normTitle.isEmpty()) {
+        const QString normArtist = normalizeLrcName(primaryArtist);
+        QStringList roots;
+        if (!musicDir.isEmpty())
+            roots << musicDir;
+        roots << home + QStringLiteral("/Music") << home + QStringLiteral("/音乐");
+        for (const QString &root : roots) {
+            if (QDir(root).exists()) {
+                const QString found = findLrcRecursive(root, normTitle, normArtist, 4);
+                if (!found.isEmpty()) {
+                    qWarning() << "[dock-lyrics] local lrc found:" << found;
+                    return found;
+                }
+            }
+        }
+    }
     return QString();
 }
 
@@ -111,7 +186,13 @@ void LyricsFetcher::doGet(const QUrl &url, Stage stage)
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader,
                   QStringLiteral("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"));
-    req.setRawHeader("Referer", "https://music.163.com/");
+    QString referer = QStringLiteral("https://music.163.com/");
+    if (stage == Stage::KugouSearch || stage == Stage::KugouKrcSearch
+        || stage == Stage::KugouDownload)
+        referer = QStringLiteral("https://www.kugou.com/");
+    else if (stage == Stage::QqSearch || stage == Stage::QqLyric)
+        referer = QStringLiteral("https://y.qq.com/");
+    req.setRawHeader("Referer", referer.toUtf8());
     req.setTransferTimeout(8000);
 
     m_stage = stage;
@@ -122,8 +203,8 @@ void LyricsFetcher::doGet(const QUrl &url, Stage stage)
 void LyricsFetcher::startNeteaseSearch()
 {
     const QString query = m_pending.artist.trimmed().isEmpty()
-                              ? m_pending.title
-                              : m_pending.title + QLatin1Char(' ') + m_pending.artist;
+                              ? m_pending.cleanTitle
+                              : m_pending.cleanTitle + QLatin1Char(' ') + m_pending.artist;
     const QUrl url(QStringLiteral("https://music.163.com/api/search/get?s=%1&type=1&limit=10&offset=0")
                        .arg(urlQueryEncode(query)));
     doGet(url, Stage::NeteaseSearch);
@@ -136,11 +217,69 @@ void LyricsFetcher::startNeteaseLyric(qint64 songId)
     doGet(url, Stage::NeteaseLyric);
 }
 
+void LyricsFetcher::startKugouSearch()
+{
+    const QString query = m_pending.artist.trimmed().isEmpty()
+                              ? m_pending.cleanTitle
+                              : m_pending.cleanTitle + QLatin1Char(' ') + m_pending.artist;
+    const QUrl url(QStringLiteral("https://songsearch.kugou.com/song_search_v2?keyword=%1&page=1&pagesize=10")
+                       .arg(urlQueryEncode(query)));
+    doGet(url, Stage::KugouSearch);
+}
+
+void LyricsFetcher::startKugouKrcSearch(const QString &hash, const QString &songName)
+{
+    QUrlQuery q;
+    if (!songName.trimmed().isEmpty())
+        q.addQueryItem(QStringLiteral("keyword"), songName.trimmed());
+    if (!hash.isEmpty())
+        q.addQueryItem(QStringLiteral("hash"), hash);
+    q.addQueryItem(QStringLiteral("ver"), QStringLiteral("1"));
+    q.addQueryItem(QStringLiteral("man"), QStringLiteral("yes"));
+    q.addQueryItem(QStringLiteral("client"), QStringLiteral("mobi"));
+    QUrl url(QStringLiteral("https://krcs.kugou.com/search"));
+    url.setQuery(q);
+    doGet(url, Stage::KugouKrcSearch);
+}
+
+void LyricsFetcher::startKugouDownload(const QString &id, const QString &accessKey)
+{
+    QUrlQuery q;
+    q.addQueryItem(QStringLiteral("ver"), QStringLiteral("1"));
+    q.addQueryItem(QStringLiteral("client"), QStringLiteral("pc"));
+    if (!id.isEmpty())
+        q.addQueryItem(QStringLiteral("id"), id);
+    if (!accessKey.isEmpty())
+        q.addQueryItem(QStringLiteral("accesskey"), accessKey);
+    q.addQueryItem(QStringLiteral("fmt"), QStringLiteral("lrc"));
+    q.addQueryItem(QStringLiteral("charset"), QStringLiteral("utf8"));
+    QUrl url(QStringLiteral("https://lyrics.kugou.com/download"));
+    url.setQuery(q);
+    doGet(url, Stage::KugouDownload);
+}
+
+void LyricsFetcher::startQqSearch()
+{
+    const QString query = m_pending.artist.trimmed().isEmpty()
+                              ? m_pending.cleanTitle
+                              : m_pending.cleanTitle + QLatin1Char(' ') + m_pending.artist;
+    const QUrl url(QStringLiteral("https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=1&n=10&format=json&w=")
+                       .arg(urlQueryEncode(query)));
+    doGet(url, Stage::QqSearch);
+}
+
+void LyricsFetcher::startQqLyric(const QString &songMid)
+{
+    const QUrl url(QStringLiteral("https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=&format=json&nobase64=0")
+                       .arg(songMid));
+    doGet(url, Stage::QqLyric);
+}
+
 void LyricsFetcher::startLrclibSearch()
 {
     QUrlQuery q;
-    if (!m_pending.title.trimmed().isEmpty())
-        q.addQueryItem(QStringLiteral("track_name"), m_pending.title.trimmed());
+    if (!m_pending.cleanTitle.trimmed().isEmpty())
+        q.addQueryItem(QStringLiteral("track_name"), m_pending.cleanTitle.trimmed());
     if (!m_pending.artist.trimmed().isEmpty())
         q.addQueryItem(QStringLiteral("artist_name"), m_pending.artist.trimmed());
     QUrl url(QStringLiteral("https://lrclib.net/api/search"));
@@ -164,25 +303,25 @@ void LyricsFetcher::onReplyFinished()
     switch (m_stage) {
     case Stage::NeteaseSearch: {
         if (netError || data.isEmpty()) {
-            // Network trouble: still give the fallback database a chance.
-            startLrclibSearch();
+            // Network trouble: give Kugou / LRCLIB fallback databases a chance.
+            startKugouSearch();
             return;
         }
         const QJsonDocument doc = QJsonDocument::fromJson(data);
         if (!doc.isObject()) {
-            startLrclibSearch();
+            startKugouSearch();
             return;
         }
         const QJsonObject result = doc.object().value(QStringLiteral("result")).toObject();
         const QJsonArray songs = result.value(QStringLiteral("songs")).toArray();
         if (songs.isEmpty()) {
-            startLrclibSearch();
+            startKugouSearch();
             return;
         }
 
         // Pick the best candidate, but only accept a *confident* match so we do
         // not show lyrics of an unrelated cover/remix song.
-        const QString wantTitle = m_pending.title.trimmed();
+        const QString wantTitle = m_pending.cleanTitle;
         const QStringList wantArtists = m_pending.artist
                                             .split(QRegularExpression("[/、&,]"), Qt::SkipEmptyParts);
         bool accept = false;
@@ -237,8 +376,8 @@ void LyricsFetcher::onReplyFinished()
         if (accept && bestId > 0) {
             startNeteaseLyric(bestId);
         } else {
-            qWarning() << "[dock-lyrics] netease: no confident match, fallback to lrclib";
-            startLrclibSearch();
+            qWarning() << "[dock-lyrics] netease: no confident match, try kugou";
+            startKugouSearch();
         }
         break;
     }
@@ -257,11 +396,242 @@ void LyricsFetcher::onReplyFinished()
             }
         }
         if (lrcText.isEmpty()) {
-            qWarning() << "[dock-lyrics] netease: empty lyric, fallback to lrclib";
-            startLrclibSearch();
+            qWarning() << "[dock-lyrics] netease: empty lyric, try kugou";
+            startKugouSearch();
             return;
         }
         emit lyricsReady(key, QStringLiteral("netease"), lrcText);
+        break;
+    }
+
+    case Stage::KugouSearch: {
+        if (netError || data.isEmpty()) {
+            startQqSearch();
+            return;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isObject()) {
+            startQqSearch();
+            return;
+        }
+        const QJsonArray lists = doc.object().value(QStringLiteral("data"))
+                                       .toObject().value(QStringLiteral("lists")).toArray();
+        if (lists.isEmpty()) {
+            qWarning() << "[dock-lyrics] kugou: empty search result, try qq";
+            startQqSearch();
+            return;
+        }
+        const QString wantTitle = m_pending.cleanTitle;
+        const QStringList wantArtists = m_pending.artist
+                                            .split(QRegularExpression("[/、&,]"), Qt::SkipEmptyParts);
+        QString bestHash, bestName;
+        int bestScore = -1000;
+        for (const QJsonValue &v : lists) {
+            const QJsonObject song = v.toObject();
+            const QString rawName = song.value(QStringLiteral("SongName")).toString();
+            const QString singer = song.value(QStringLiteral("SingerName")).toString();
+            // strip suffixes like " (Live)" / " (伴奏)" for a cleaner match
+            QString base = rawName;
+            base.remove(QRegularExpression(QStringLiteral("\\s*\\(.*\\)\\s*")));
+            base = base.trimmed();
+            int score = 0;
+            if (!wantTitle.isEmpty()) {
+                if (base.compare(wantTitle, Qt::CaseInsensitive) == 0)
+                    score += 100;
+                else if (base.contains(wantTitle, Qt::CaseInsensitive))
+                    score += 40;
+                else if (rawName.contains(wantTitle, Qt::CaseInsensitive))
+                    score += 15;
+            }
+            bool artistOk = wantArtists.isEmpty();
+            for (const QString &w : wantArtists) {
+                const QString ww = w.trimmed();
+                if (ww.isEmpty())
+                    continue;
+                if (singer.contains(ww, Qt::CaseInsensitive)) {
+                    artistOk = true;
+                    score += 15;
+                    break;
+                }
+            }
+            if (!artistOk)
+                score -= 10;
+            if (score > bestScore) {
+                bestScore = score;
+                bestHash = song.value(QStringLiteral("FileHash")).toString();
+                bestName = rawName;
+            }
+        }
+        if (bestScore >= 50 && !bestHash.isEmpty()) {
+            qWarning() << "[dock-lyrics] kugou: candidate" << bestName << "hash" << bestHash;
+            startKugouKrcSearch(bestHash, bestName);
+        } else {
+            qWarning() << "[dock-lyrics] kugou: no confident match, try qq";
+            startQqSearch();
+        }
+        break;
+    }
+
+    case Stage::KugouKrcSearch: {
+        if (netError || data.isEmpty()) {
+            startQqSearch();
+            return;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isObject()) {
+            startQqSearch();
+            return;
+        }
+        const QJsonArray candidates = doc.object().value(QStringLiteral("candidates")).toArray();
+        if (candidates.isEmpty()) {
+            qWarning() << "[dock-lyrics] kugou: no krc candidate, try qq";
+            startQqSearch();
+            return;
+        }
+        const QJsonObject first = candidates.first().toObject();
+        const QString id = first.value(QStringLiteral("id")).toString();
+        const QString accessKey = first.value(QStringLiteral("accesskey")).toString();
+        if (id.isEmpty() || accessKey.isEmpty()) {
+            startQqSearch();
+            return;
+        }
+        startKugouDownload(id, accessKey);
+        break;
+    }
+
+    case Stage::KugouDownload: {
+        if (netError || data.isEmpty()) {
+            startQqSearch();
+            return;
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isObject()) {
+            startQqSearch();
+            return;
+        }
+        const QString b64 = doc.object().value(QStringLiteral("content")).toString();
+        if (b64.isEmpty()) {
+            qWarning() << "[dock-lyrics] kugou: empty lyric content, try qq";
+            startQqSearch();
+            return;
+        }
+        QString lrc = QString::fromUtf8(QByteArray::fromBase64(b64.toUtf8()));
+        if (lrc.startsWith(QChar(0xFEFF)))
+            lrc.remove(0, 1);
+        if (lrc.trimmed().isEmpty()) {
+            startQqSearch();
+            return;
+        }
+        qWarning() << "[dock-lyrics] kugou lyric ready, lines=" << lrc.split(QLatin1Char('\n')).size();
+        emit lyricsReady(key, QStringLiteral("kugou"), lrc);
+        break;
+    }
+
+    case Stage::QqSearch: {
+        if (netError || data.isEmpty()) {
+            startLrclibSearch();
+            return;
+        }
+        const QJsonDocument doc = parseJsonp(data);
+        if (!doc.isObject()) {
+            startLrclibSearch();
+            return;
+        }
+        const QJsonArray list = doc.object().value(QStringLiteral("data")).toObject()
+                                       .value(QStringLiteral("song")).toObject()
+                                       .value(QStringLiteral("list")).toArray();
+        if (list.isEmpty()) {
+            qWarning() << "[dock-lyrics] qq: empty search result, fallback to lrclib";
+            startLrclibSearch();
+            return;
+        }
+        const QString wantTitle = m_pending.cleanTitle;
+        const QStringList wantArtists = m_pending.artist
+                                            .split(QRegularExpression("[/、&,]"), Qt::SkipEmptyParts);
+        QString bestMid;
+        int bestScore = -1000;
+        for (const QJsonValue &v : list) {
+            const QJsonObject song = v.toObject();
+            const QString name = song.value(QStringLiteral("songname")).toString();
+            QString base = name;
+            base.remove(QRegularExpression(QStringLiteral("\\s*\\(.*\\)\\s*")));
+            base = base.trimmed();
+            int score = 0;
+            bool titleExact = false;
+            bool titleContained = false;
+            if (!wantTitle.isEmpty()) {
+                if (base.compare(wantTitle, Qt::CaseInsensitive) == 0) {
+                    score += 100;
+                    titleExact = true;
+                } else if (base.contains(wantTitle, Qt::CaseInsensitive)) {
+                    score += 40;
+                    titleContained = true;
+                } else if (name.contains(wantTitle, Qt::CaseInsensitive)) {
+                    score += 15;
+                }
+            }
+            bool artistOk = wantArtists.isEmpty();
+            const QJsonArray singers = song.value(QStringLiteral("singer")).toArray();
+            QStringList got;
+            for (const QJsonValue &a : singers)
+                got << a.toObject().value(QStringLiteral("name")).toString();
+            for (const QString &w : wantArtists) {
+                const QString ww = w.trimmed();
+                if (ww.isEmpty())
+                    continue;
+                for (const QString &g : got) {
+                    if (g.contains(ww, Qt::CaseInsensitive) || ww.contains(g, Qt::CaseInsensitive)) {
+                        artistOk = true;
+                        score += 15;
+                        break;
+                    }
+                }
+            }
+            if (!artistOk)
+                score -= 10;
+            if (!(titleExact || (titleContained && artistOk)))
+                continue;
+            if (score > bestScore) {
+                bestScore = score;
+                bestMid = song.value(QStringLiteral("songmid")).toString();
+            }
+        }
+        if (bestScore >= 50 && !bestMid.isEmpty()) {
+            m_pending.qqSongMid = bestMid;
+            qWarning() << "[dock-lyrics] qq: candidate mid" << bestMid;
+            startQqLyric(bestMid);
+        } else {
+            qWarning() << "[dock-lyrics] qq: no confident match, fallback to lrclib";
+            startLrclibSearch();
+        }
+        break;
+    }
+
+    case Stage::QqLyric: {
+        if (netError || data.isEmpty()) {
+            startLrclibSearch();
+            return;
+        }
+        const QJsonDocument doc = parseJsonp(data);
+        if (!doc.isObject()) {
+            startLrclibSearch();
+            return;
+        }
+        const QString b64 = doc.object().value(QStringLiteral("lyric")).toString();
+        if (b64.isEmpty()) {
+            qWarning() << "[dock-lyrics] qq: empty lyric content, fallback to lrclib";
+            startLrclibSearch();
+            return;
+        }
+        QString lrc = QString::fromUtf8(QByteArray::fromBase64(b64.toUtf8()));
+        if (lrc.startsWith(QChar(0xFEFF)))
+            lrc.remove(0, 1);
+        if (lrc.trimmed().isEmpty()) {
+            startLrclibSearch();
+            return;
+        }
+        qWarning() << "[dock-lyrics] qq lyric ready, lines=" << lrc.split(QLatin1Char('\n')).size();
+        emit lyricsReady(key, QStringLiteral("qq"), lrc);
         break;
     }
 
@@ -283,7 +653,7 @@ void LyricsFetcher::onReplyFinished()
 
         // LRCLIB returns full records (including synced/plain lyrics) in search
         // results, so no extra per-song request is needed.
-        const QString wantTitle = m_pending.title.trimmed();
+        const QString wantTitle = m_pending.cleanTitle;
         const QStringList wantArtists = m_pending.artist
                                             .split(QRegularExpression("[/、&,]"), Qt::SkipEmptyParts);
         int bestScore = -1000;

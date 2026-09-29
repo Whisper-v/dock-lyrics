@@ -14,25 +14,25 @@
 ## 🖼️ 效果预览
 
 *（发布时请上传本地图片，替换下面三行）*
-![整条任务栏效果：docs/screenshot-main.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/screenshot-main.png)
-![任务栏歌词特写：docs/screenshot-closeup.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/screenshot-closeup.png)
-![运行效果：docs/dock-lyrics-preview.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/dock-lyrics-preview.png)
+![整条任务栏效果：docs/screenshot-main.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-main.png)
+![任务栏歌词特写：docs/screenshot-closeup.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-closeup.png)
+![运行效果：docs/dock-lyrics-preview.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/dock-lyrics-preview.png)
 
 ## ✨ 核心亮点
 
 - **播放唤醒，暂停隐身**：开始播放自动出现歌词条，暂停/停止自动收起，绝不占任务栏；
 - **跑马灯实时同步**：按歌曲进度逐行切换、超长行平滑滚动；任务栏在左右（竖排）时自动收成均衡器图标；
-- **三级歌词来源**：本地 `.lrc` → 网易云（精确匹配防串词）→ LRCLIB 兜底（周杰伦等网易下架曲也能命中），层层降级；
+- **五级歌词来源**：本地 `.lrc` → 网易云（精确匹配防串词）→ **酷狗** → **QQ 音乐** → LRCLIB 兜底，层层降级；
 - **12 种配色 + 自定义**：跟随系统 / 6 套高亮彩色 / 4 套深色主题（自带半透明胶囊底）/ 自定义字体·背景颜色，右键即换、即时生效并记忆；
-- **完整交互**：单击播放⇄暂停；悬停显示歌名/歌手/来源；右键菜单含 播放/暂停、上下曲、换色、刷新歌词；
+- **完整交互**：单击播放⇄暂停；悬停显示歌名/歌手/来源；右键菜单含 播放/暂停、上下曲、**显示位置（任务栏左/右）**、换色、刷新歌词；
 - **播放器兼容加固**：垃圾标题过滤、切歌/重启都能识别、拖进度条实时跳歌词行（Seeked 与 Position 双通道）；
 - **零守护进程、零 HTTP 服务**，纯 D-Bus 监听，装完即用。
 
 ## 📦 安装（一条命令）
 
 ```bash
-# 下载本贴附件 com.github.dock-lyrics_1.0.0_amd64.zip，解压后：
-sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
+# 下载本贴附件 com.github.dock-lyrics_1.1.0_amd64.zip，解压后：
+sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
 # 如提示依赖缺失
 sudo apt -f install
 ```
@@ -47,7 +47,7 @@ sudo apt -f install
 | --- | --- |
 | 单击歌词条 | 播放 ⇄ 暂停 |
 | 悬停 | 歌名 / 歌手 / 当前句 / 歌词来源 |
-| 右键 | 播放控制、上一曲/下一曲、**颜色主题**、刷新歌词 |
+| 右键 | 播放控制、上一曲/下一曲、**显示位置**（任务栏左/右）、**颜色主题**、刷新歌词 |
 | 无播放器播放 | 歌词条自动隐藏（设计如此） |
 
 ## 🎨 配色一览
@@ -67,15 +67,15 @@ sudo apt -f install
 - **双通道 seek 同步**：`Seeked` 信号与 `PropertiesChanged.Position` 两条路径都会立即重算歌词行，播放中/暂停都即时跳转；
 - 完整调试命令与 Bug 报告模板见仓库 `docs/debugging-guide.md`。
 
-## 🏗️ 开发历程（11 轮迭代）
+## 🏗️ 开发历程（12 轮迭代）
 
-脚手架 → 端到端 MPRIS 管线 → .deb 打包 + QQ 音乐实机适配 → seek 同步 → 切歌/重启兼容加固 → 调试指南 → 高亮主题 + 右键菜单 → 4 套深色主题 → 自定义字体/背景色 → 真实反馈"拖进度条不同步"实证修复（补 Position 通道）→ 开源 + v1.0.0 Release。
+脚手架 → 端到端 MPRIS 管线 → .deb 打包 + QQ 音乐实机适配 → seek 同步 → 切歌/重启兼容加固 → 调试指南 → 高亮主题 + 右键菜单 → 4 套深色主题 → 自定义字体/背景色 → 真实反馈"拖进度条不同步"实证修复（补 Position 通道）→ 开源 + v1.0.0 Release → v1.1 五级歌词源（补酷狗/QQ）+ 显示位置切换 + 暂停驻留 + 应用图标，打包 v1.1.0。
 
 ## 🔗 开源与下载
 
 - **GitHub**：https://github.com/Whisper-v/dock-lyrics （GPL-3.0，含完整源码/README/调试指南）
-- **v1.0.0 Release**：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.0.0
-- 附件：`com.github.dock-lyrics_1.0.0_amd64.zip`（内含 .deb，SHA-256 `965496ed…36816f`）
+- **v1.1.0 Release**：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.0
+- 附件：`com.github.dock-lyrics_1.1.0_amd64.zip`（内含 .deb，SHA-256 `47219b6c…936a54`）
 
 ## 🗓️ 未来计划
 

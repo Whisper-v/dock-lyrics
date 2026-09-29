@@ -4,9 +4,9 @@
 > **适用系统**：deepin 25 / UOS V25（amd64）
 > **技术栈**：C++17 / Qt6（Core·Gui·Network·DBus）/ dde-shell `DApplet` 插件框架 / QML
 
-![整条任务栏效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/screenshot-main.png)
+![整条任务栏效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-main.png)
 
-![任务栏歌词特写](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/screenshot-closeup.png)
+![任务栏歌词特写](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-closeup.png)
 
 ## 🎯 作品简介
 
@@ -19,21 +19,22 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 把"正在唱的那一句"直接泊进任务栏——不用切窗口、不用开悬浮窗，余光一瞥就能跟着唱。
 
-![dock-lyrics 运行效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.0.0/docs/dock-lyrics-preview.png)
+![dock-lyrics 运行效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/dock-lyrics-preview.png)
 
 ## ✨ 功能特性
 
 | 能力 | 说明 |
 | --- | --- |
-| **播放唤醒** | 监听 MPRIS（`org.mpris.MediaPlayer2.*`），任一播放器开始播放即自动出现；暂停/停止自动收起 |
+| **播放唤醒** | 监听 MPRIS（`org.mpris.MediaPlayer2.*`），任一播放器开始播放即自动出现；**播放器存活期间暂停也驻留**，播放器退出才收起 |
 | **同步跑马灯** | 按歌曲进度逐行切换，超长行平滑滚动；**任意位置任务栏**：上下方显示完整歌词，左右竖排自动收起为均衡器图标 |
-| **三级歌词来源** | 本地 `.lrc` → 网易云音乐（带匹配校验）→ LRCLIB 兜底，层层降级，详见下表 |
+| **五级歌词来源** | 本地 `.lrc` → 网易云音乐（带匹配校验）→ **酷狗音乐** → **QQ 音乐** → LRCLIB 兜底，层层降级，详见下表 |
 | **12 种配色 + 自定义** | 跟随系统 / 6 高亮彩色 / 4 深色主题 / 自定义字体·背景颜色（见配色章节） |
-| **右键菜单** | 播放/暂停、上一曲、下一曲、颜色主题、刷新歌词；实时标注当前歌词来源 |
+| **右键菜单** | 播放/暂停、上一曲、下一曲、**显示位置**、颜色主题、刷新歌词；实时标注当前歌词来源 |
+| **📍 显示位置可切换** | 右键「显示位置」即可在任务栏**左侧**（默认）/ **右侧**之间切换，选择持久化保存 |
 | **点击/悬停交互** | 单击播放⇄暂停；悬停气泡显示 歌名/歌手/当前句/歌词来源 |
 | **均衡器动画** | 3 根音柱随播放律动，颜色随主题/自定义文字色同步换色 |
 | **播放器兼容加固** | 垃圾标题过滤、播放器重启重连、切歌只发 invalidated 也能识别、双通道 seek 同步（见调试章节） |
-| **持久化** | 主题/自定义颜色选择保存到 `~/.config/deepin/dock-lyrics.conf`，重启不丢 |
+| **持久化** | 主题/自定义颜色/显示位置等选择保存到 `~/.config/deepin/dock-lyrics.conf`，重启不丢 |
 
 ## 🎨 12 种配色 + 自定义配色
 
@@ -48,15 +49,17 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 > 自定义配色时文字与均衡器音柱同步换色，选择持久化，重启/注销后保留。
 
-## 🎼 歌词从哪来？三级来源层层兜底
+## 🎼 歌词从哪来？五级来源层层兜底
 
 | 优先级 | 来源 | 说明 |
 | --- | --- | --- |
 | 1 | **本地 `.lrc`** | 正在播放的本地文件旁同名 `.lrc`；或 `~/Music`、`~/音乐`、`~/Music/Lyrics`、`~/Music/QQMusic` 等目录下 `歌名.lrc` / `歌手 - 歌名.lrc` |
 | 2 | **网易云音乐** | 搜索命中并做"标题精确 + 歌手匹配"**高置信度校验**，避免匹配到翻唱/同名歌 |
-| 3 | **LRCLIB** | 网易云无版权/无匹配时自动降级（如周杰伦等已下架曲目也能命中）；优先带时间轴的 `syncedLyrics` |
+| 3 | **酷狗音乐** | 网易云无匹配/无词时自动降级，走酷狗搜索接口 + `krcs` 取词（支持 KRC 时间轴） |
+| 4 | **QQ 音乐** | 酷狗未命中时继续降级，QQ 音乐搜索接口取 `songmid` 后拉取歌词 |
+| 5 | **LRCLIB** | 以上在线曲库都失败时兜底（冷门曲也能命中）；优先带时间轴的 `syncedLyrics` |
 
-三个来源都失败时，歌词条退化为「歌名 - 歌手」提示"没有找到歌词"；**此时暂停再播放即可自动重试**。
+五个来源都失败时，歌词条退化为「歌名 - 歌手」提示"没有找到歌词"；**此时暂停再播放即可自动重试**。
 本地 `.lrc` 完全离线可用，放一个同名文件即可 100% 命中。
 
 ## 🚀 安装方法
@@ -71,11 +74,11 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 ### 方式一：安装 .deb（推荐）
 
-**v1.0.0 下载：** `com.github.dock-lyrics_1.0.0_amd64.deb`（本贴附件 / GitHub Release）
+**v1.1.0 下载：** `com.github.dock-lyrics_1.1.0_amd64.deb`（本贴附件 / GitHub Release）
 
 ```bash
-wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.0.0/com.github.dock-lyrics_1.0.0_amd64.deb
-sudo dpkg -i com.github.dock-lyrics_1.0.0_amd64.deb
+wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.1.0/com.github.dock-lyrics_1.1.0_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
 # 如提示依赖缺失
 sudo apt -f install
 ```
@@ -105,8 +108,8 @@ systemctl --user restart dde-shell@DDE.service
 | 操作 | 效果 |
 | --- | --- |
 | 单击歌词条 | 播放 ⇄ 暂停 |
-| 悬停歌词条 | 气泡显示 歌名 / 歌手 / 当前句 / 歌词来源（本地·网易云·LRCLIB） |
-| 右键歌词条 | 打开快捷菜单：播放/暂停、上一曲、下一曲、**颜色主题**（12 项）、**刷新歌词** |
+| 悬停歌词条 | 气泡显示 歌名 / 歌手 / 当前句 / 歌词来源（本地·网易云·酷狗·QQ·LRCLIB） |
+| 右键歌词条 | 打开快捷菜单：播放/暂停、上一曲、下一曲、**显示位置**（任务栏左/右）、**颜色主题**（12 项）、**刷新歌词** |
 | 任务栏在屏幕上下方 | 显示完整跑马灯歌词 |
 | 任务栏在屏幕左/右侧（竖排） | 自动收起为均衡器图标，不挤压竖排布局 |
 
@@ -122,6 +125,7 @@ systemctl --user restart dde-shell@DDE.service
 | `ui/colorTheme` | 配色索引：0 跟随系统；1–6 高亮彩色；7–10 深色主题；11 自定义配色 |
 | `ui/textColor` | 自定义字体颜色（`ui/colorTheme=11` 时生效） |
 | `ui/bgColor` | 自定义背景颜色（可为空 = 无背景） |
+| `ui/dockSide` | 显示位置：`0` = 任务栏右侧（托盘区起始位 `dockOrder=21`）；`1` = 任务栏左侧（`dockOrder=10`，排在左侧插件之后）。默认 `1` |
 
 右键菜单切换后自动写回本文件，无需手改；重启/注销后保留。
 
@@ -135,7 +139,7 @@ package/
 src/
   lyricsapplet.*             DApplet 后端：MPRIS 监听、活动播放器决策、歌词状态机
   playerprobe.*              逐播放器 PropertiesChanged 探测（含播放器重启重连）
-  lyricsfetcher.*            本地 lrc 查找 + 网易云 + LRCLIB 在线获取
+  lyricsfetcher.*            本地 lrc 查找 + 网易云/酷狗/QQ/LRCLIB 在线获取
   lrcparser.*                LRC 时间轴解析 / 元数据行过滤
   qdbusutil.h                QDBusArgument(a{sv}) → QVariantMap 解码工具
 deb/
@@ -162,7 +166,7 @@ docs/                        截图与调试指南
 │              ▲ 播放/歌词/行/状态 (Applet.* 属性)                                │
 │        src/lyricsapplet.*  DApplet 后端                                       │
 │              ├─ playerprobe.*   每个播放器的 PropertiesChanged 探测            │
-│              ├─ lyricsfetcher.* 本地查找 → 网易云 → LRCLIB                     │
+│              ├─ lyricsfetcher.* 本地 → 网易云 → 酷狗 → QQ → LRCLIB               │
 │              └─ lrcparser.*     LRC 时间轴解析/元数据行过滤                     │
 └──────────────────────────────────────────────────────────────────────────────┘
                ▲ 用户总线 (session bus) D-Bus · MPRIS
@@ -232,7 +236,7 @@ dbus-monitor "interface='org.freedesktop.DBus.Properties'" \
 
 > ⚠️ **Chromium 内核播放器（如 QQ 音乐桌面版）的 MPRIS 是一个"桩"**：恒报 `CanSeek=false`、`Position=0`、`mpris:length` 缺失，既不发 `Seeked` 也不更新 `Position`。因此播放/暂停/切歌可用，但**应用内拖动进度条无法被任何 MPRIS 客户端感知**——这是播放器侧能力限制，并非插件缺陷。规范播放器（Deepin 音乐、VLC、foobar2000 等）可全程实时同步。
 
-其他已知边界（非 Bug，勿误报）：多实例 Chromium 各占一个总线名、插件只认"Playing 且最近活跃"；纯音乐/播客无词属正常；在线歌词依赖网络（`music.163.com` 与 `lrclib.net`）。
+其他已知边界（非 Bug，勿误报）：多实例 Chromium 各占一个总线名、插件只认"Playing 且最近活跃"；纯音乐/播客无词属正常；在线歌词依赖网络（`music.163.com`、`kugou.com`、`y.qq.com` 与 `lrclib.net`）。
 
 ### 用 mock 复现 / 验证
 
@@ -246,7 +250,7 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 
 ## 🏗️ 开发过程
 
-全程 11 轮迭代、从零到开源 Release：
+全程 12 轮迭代、从零到开源 Release：
 
 1. **脚手架**：C++ MPRIS dock 插件框架 + 跑马灯 QML，打通 dde-shell 插件加载；
 2. **端到端管线**：`NameOwnerChanged` 发现播放器 → 逐播放器探测 → 本地/在线取词 → 显示，整链路跑通；
@@ -258,7 +262,8 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 8. **深色主题**：新增 4 套自带胶囊底的深色主题（曜石黑/深空蓝/暮光紫/墨夜绿），浅色任务栏也可读；
 9. **自定义配色**：字体颜色、背景颜色分开自定义，十余种色板 + 无/半透明/纯色背景；
 10. **真实缺陷修复**：接到反馈"拖进度条仍不同步"→ 实证定位到"只更新 Position 不发 Seeked"的播放器通道缺口，补上第二条路径，播放中/暂停时都即时重算当前行；
-11. **开源发布**：GPL-3.0 LICENSE、整理 README、上传 GitHub、发布 v1.0.0 Release（含 .deb）。
+11. **开源发布**：GPL-3.0 LICENSE、整理 README、上传 GitHub、发布 v1.0.0 Release（含 .deb）；
+12. **v1.1 增强**：歌词来源扩到**五级**（补酷狗、QQ 音乐）、新增**右键「显示位置」**（任务栏左/右切换并记忆）、**暂停驻留**、歌词文字区加宽 50%、仓库与应用图标（`docs/icon.png`），重新打包为 `com.github.dock-lyrics_1.1.0_amd64.deb`。
 
 ## 🔗 源码与开源
 
@@ -266,8 +271,8 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 
 - 开源协议：**GPL-3.0**（OSI 批准，LICENSE 全文在仓库）
 - 独立仓库，可单独构建安装；仓库自带 mock 播放器与完整调试指南
-- 📦 v1.0.0 Release（含 .deb）：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.0.0
-- SHA-256：`965496ed70688f5ea3851a4eaf05fc72f9bc844492cf446df3d46d7f0936816f`
+- 📦 v1.1.0 Release（含 .deb）：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.0
+- SHA-256：`47219b6c23ea9adefcc5523480297d9a81ef0364d36a5042ddf778c689936a54`
 
 ## 🗓️ 未来计划
 

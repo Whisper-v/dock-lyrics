@@ -3,6 +3,7 @@
 > 项目：deepin 25 dde-shell 任务栏同步歌词插件（DDE 插件竞赛作品）
 > 开源仓库：https://github.com/Whisper-v/dock-lyrics ｜ GPL-3.0
 > 开发周期：2026-09-08 集中开发（约半天完成 11 轮迭代）→ 09-09 完成缺陷修复与开源发布
+> 后续迭代：v1.1（五级歌词来源 · 显示位置切换 · 暂停驻留 · 应用图标）
 
 ---
 
@@ -33,7 +34,7 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 | 后端 | C++17 + Qt6（Core/Gui/Network/DBus）+ `ds_install_package` | dde-shell 原生、性能好、便于做 D-Bus 状态机 |
 | 前端 | QML（package/main.qml） | 跑马灯/动画/菜单表达力强，与 Dock 主题天然融合 |
 | 媒体协议 | MPRIS2（session bus D-Bus，`org.mpris.MediaPlayer2.*`） | 跨播放器统一标准，一次接入处处可用 |
-| 歌词来源 | 本地 `.lrc` → 网易云 → LRCLIB | 离线可用 + 在线兜底 |
+| 歌词来源 | 本地 `.lrc` → 网易云 → 酷狗 → QQ 音乐 → LRCLIB | 离线可用 + 在线兜底 |
 | 打包 | CMake + deb（DEBIAN/control + postinst） | 一键 `dpkg -i`，postinst 自动重启 dde-shell |
 | 测试 | `tools/mpris_mock.py` 模拟器 + 截屏/OCR 验证 | 无播放器也能全流程复现与回归 |
 
@@ -47,7 +48,7 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 │              ▲ 播放/歌词/行/状态 (Applet.* 属性)                                │
 │        src/lyricsapplet.*  DApplet 后端：MPRIS 监听/活动播放器/歌词状态机      │
 │              ├─ playerprobe.*   逐播放器 PropertiesChanged 探测（重启重连）     │
-│              ├─ lyricsfetcher.* 本地 lrc 查找 → 网易云 → LRCLIB                │
+│              ├─ lyricsfetcher.* 本地 → 网易云 → 酷狗 → QQ → LRCLIB                │
 │              └─ lrcparser.*     LRC 时间轴解析 / 元数据行过滤                   │
 └──────────────────────────────────────────────────────────────────────────────┘
                ▲ 用户总线 (session bus) D-Bus · MPRIS
@@ -62,7 +63,7 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 | # | 时间 | 提交 | 里程碑 | 做了什么 |
 | --- | --- | --- | --- | --- |
 | 1 | 09-08 19:03 | `5aae188` | 脚手架 | 搭建 DApplet 插件骨架 + 跑马灯 QML，打通编译与 dde-shell 加载 |
-| 2 | 09-08 20:31 | `87c48bf` | 端到端管线 | `NameOwnerChanged` 发现播放器 → 逐播放器探测 → 三级取词 → 显示，全链路跑通 |
+| 2 | 09-08 20:31 | `87c48bf` | 端到端管线 | `NameOwnerChanged` 发现播放器 → 逐播放器探测 → 五级取词 → 显示，全链路跑通 |
 | 3 | 09-08 21:19 | `e3befd9` | 可用化 | .deb 打包（postinst 自动重启 dde-shell）、补 README、QQ 音乐实机适配（垃圾标题、网易无版权降级） |
 | 4 | 09-08 21:39 | `990fd33` | seek 同步 v1 | 订阅 `Seeked` 信号，拖动进度条歌词实时跳行 |
 | 5 | 09-08 21:48 | `74a8916` | 兼容加固 | 切歌只发 invalidated 也能识别；扩大本地 .lrc 搜索目录（QQ音乐/网易云/酷狗下载目录） |
@@ -71,7 +72,7 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 | 8 | 09-08 23:17 | `e683b54` | 深色主题 | 新增 4 套自带半透明胶囊底的深色主题，浅色任务栏也可读 |
 | 9 | 09-08 23:55 | `27f51ba` | 自定义配色 | 字体色/背景色分开自定义，十余种色板 + 透明背景 |
 | 10 | 09-09 00:35 | `910c201` | seek 同步 v2 | 修复"只更新 Position 不发 Seeked"播放器的歌词卡行问题 |
-| 11 | 09-09 01:43 | `f1991d3` | 开源发布 | GPL-3.0 LICENSE、README 校对、GitHub 仓库 + v1.0.0 Release（附 .deb） |
+| 11 | 09-09 01:43 | `f1991d3` | 开源发布 | GPL-3.0 LICENSE、README 校对、GitHub 仓库 + v1.1.0 Release（附 .deb） |
 | 12 | 09-09 | `927e10c` 等 | 社区材料 | 论坛发布文（完整版 + 精简版）、本开发过程说明 |
 
 ## 6. 关键技术难点与解决过程
@@ -127,9 +128,9 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 
 ## 9. 成果
 
-- **功能**：MPRIS 播放唤醒/暂停隐身、三级歌词来源、12 配色 + 自定义字体背景色、右键菜单、双通道 seek 同步、均衡器动画；
+- **功能**：MPRIS 播放唤醒/暂停隐身、五级歌词来源、12 配色 + 自定义字体背景色、右键菜单、双通道 seek 同步、均衡器动画；
 - **兼容矩阵**：Deepin 音乐、VLC、规范 MPRIS 播放器全程实时同步；QQ 音乐（Chromium 桩）播放/切歌可用、应用内拖进度条受上游限制；
-- **开源**：GPL-3.0，GitHub 公开仓库 + v1.0.0 Release（.deb，SHA-256 校验），社区可下载安装、可提 Issue/PR。
+- **开源**：GPL-3.0，GitHub 公开仓库 + v1.0.0 / v1.1.0 Release（.deb，SHA-256 校验），社区可下载安装、可提 Issue/PR。
 
 ## 10. 经验与反思
 
@@ -145,3 +146,24 @@ Deepin 25 采用全新的 dde-shell 任务栏与插件（Applet）体系，第�
 - 渐变、描边等更多视觉方案与专辑封面色跟随；
 - 规范播放器的迷你可拖进度条；
 - arm64 支持与 deepin V23 兼容性验证。
+
+## 12. v1.1 迭代记录
+
+v1.0.0 开源之后，围绕"**歌词更找得到、位置更自由**"做了一轮增强，并顺手修掉一处潜伏的解析 Bug：
+
+| # | 改动 | 实现要点 |
+| --- | --- | --- |
+| 1 | **五级歌词来源** | `lyricsfetcher.cpp` 状态机新增酷狗（`songsearch` → `krcs/search` → `lyrics/download`，支持 KRC 时间轴）与 QQ 音乐（`client_search_cp` → `fcg_query_lyric_new`，base64 解码）两级，LRCLIB 退居最后兜底 |
+| 2 | **显示位置可切换** | `LyricsApplet` 新增 `dockSide` 属性 + `loadDockSide()`/`saveDockSide()` 持久化；QML 里 `dockOrder = dockSide === 1 ? 10 : 21`（左侧区最高位 / 右侧区起始位）；右键菜单新增「显示位置 → 任务栏左侧 / 任务栏右侧」互斥勾选 |
+| 3 | **暂停驻留** | 新增 `hasActivePlayer` 属性（`!m_activeService.isEmpty()`），QML 可见性改为 `playing || hasActivePlayer`——播放器活着就不收起，切歌/暂停不再闪烁 |
+| 4 | **歌词窗加宽** | `textAreaWidth` 由 `dockSize * 3.6`（最小 90）改为 `dockSize * 5.4`（最小 135），均衡器区宽度不变 |
+| 5 | **应用图标** | 新增 `docs/icon.png`，由 `deb/build-deb.sh` 安装为 `/usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png`；同时作为 README 顶部 logo |
+| 6 | **命名与版本** | 插件 Id / deb 包名统一 `com.github.dock-lyrics`，版本升 `1.1.0`（`control`、`CMakeLists.txt`、输出包名同步） |
+| 7 | **Bug 修复** | 酷狗搜索结果去掉括号后缀的正则被写成 JS 风格 `"\s*\(.*\)\s*"`，C++ 会吞掉反斜杠（编译器仅告警），实际退化成 `s*(.*)s*`；改用 `"\\s*\\(.*\\)\\s*"` 后告警消失、匹配恢复预期 |
+
+**本轮实测（Deepin 25 实机）**
+
+- **降级链路**：mock 播放《晴天》→ `netease: empty lyric, try kugou` → `kugou lyric ready, lines= 36` → `lyricsReady src= "kugou" lines= 25`；另一轮链路走到 `qq: empty search result, fallback to lrclib` → `lrclib match` → `lines= 42`，四级在线来源逐级兜底均验证通过；
+- **真实播放器**：QQ 音乐桌面版（Chromium MPRIS）在播《下雨了》→ `lyricsReady src= "netease" lines= 35`；
+- **显示位置**：用像素连通域定位歌词条胶囊（深色主题，胶囊底 `#CC142340`）——右侧模式下位于 `x=1177–1426`，切到左侧后移动到 `x=145–468`，两侧均与左侧插件/托盘区正常错开；验证后已把配置还原为原值；
+- **打包安装**：`dpkg -r dock-lyrics` 卸掉旧 Id 包 → 安装 `com.github.dock-lyrics_1.1.0_amd64.deb` → 重启 dde-shell，插件从新路径加载、图标注册到 hicolor 主题，无残留旧文件。
