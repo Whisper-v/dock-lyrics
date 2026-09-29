@@ -4,9 +4,9 @@
 > **适用系统**：deepin 25 / UOS V25（amd64）
 > **技术栈**：C++17 / Qt6（Core·Gui·Network·DBus）/ dde-shell `DApplet` 插件框架 / QML
 
-![整条任务栏效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-main.png)
+![整条任务栏效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/screenshot-main.png)
 
-![任务栏歌词特写](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-closeup.png)
+![任务栏歌词特写](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/screenshot-closeup.png)
 
 ## 🎯 作品简介
 
@@ -19,7 +19,7 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 把"正在唱的那一句"直接泊进任务栏——不用切窗口、不用开悬浮窗，余光一瞥就能跟着唱。
 
-![dock-lyrics 运行效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/dock-lyrics-preview.png)
+![dock-lyrics 运行效果](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/dock-lyrics-preview.png)
 
 ## ✨ 功能特性
 
@@ -74,11 +74,11 @@ dock-lyrics（歌词小舟）是一个运行在 **deepin 25 / dde-shell 任务�
 
 ### 方式一：安装 .deb（推荐）
 
-**v1.1.0 下载：** `com.github.dock-lyrics_1.1.0_amd64.deb`（本贴附件 / GitHub Release）
+**v1.1.1 下载：** `com.github.dock-lyrics_1.1.1_amd64.deb`（本贴附件 / GitHub Release）
 
 ```bash
-wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.1.0/com.github.dock-lyrics_1.1.0_amd64.deb
-sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
+wget https://github.com/Whisper-v/dock-lyrics/releases/download/v1.1.1/com.github.dock-lyrics_1.1.1_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.1.1_amd64.deb
 # 如提示依赖缺失
 sudo apt -f install
 ```
@@ -264,6 +264,7 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 10. **真实缺陷修复**：接到反馈"拖进度条仍不同步"→ 实证定位到"只更新 Position 不发 Seeked"的播放器通道缺口，补上第二条路径，播放中/暂停时都即时重算当前行；
 11. **开源发布**：GPL-3.0 LICENSE、整理 README、上传 GitHub、发布 v1.0.0 Release（含 .deb）；
 12. **v1.1 增强**：歌词来源扩到**五级**（补酷狗、QQ 音乐）、新增**右键「显示位置」**（任务栏左/右切换并记忆）、**暂停驻留**、歌词文字区加宽 50%、仓库与应用图标（`docs/icon.png`），重新打包为 `com.github.dock-lyrics_1.1.0_amd64.deb`。
+13. **打包规范修复（v1.1.1）**：投稿时被商店校验拦下——「应用包内图标检测不通过：icon文件不存在」。定位到包内**只有一张 PNG、没有 `.desktop` 桌面入口**，而校验器正是按 `.desktop` 的 `Icon=` 去 hicolor 主题里找同名文件。遂补 `com.github.dock-lyrics.desktop`（`Icon=com.github.dock-lyrics`）并按 freedesktop 规范生成 **16/24/32/48/64/128/256 七种尺寸**图标，`Name`/`Icon`/包名三者严格同名，重新打包为 `com.github.dock-lyrics_1.1.1_amd64.deb`。
 
 ## 🔗 源码与开源
 
@@ -271,8 +272,8 @@ python3 tools/mpris_mock.py > tools/mpris_mock.log 2>&1 &
 
 - 开源协议：**GPL-3.0**（OSI 批准，LICENSE 全文在仓库）
 - 独立仓库，可单独构建安装；仓库自带 mock 播放器与完整调试指南
-- 📦 v1.1.0 Release（含 .deb）：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.0
-- SHA-256：`47219b6c23ea9adefcc5523480297d9a81ef0364d36a5042ddf778c689936a54`
+- 📦 v1.1.1 Release（含 .deb / .zip）：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.1
+- SHA-256（.deb）：`62fbcfe4968dbb98247edbfeb769e2e06c51144bde8a5e73982f74c6ded13aac`
 
 ## 🗓️ 未来计划
 

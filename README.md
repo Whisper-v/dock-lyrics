@@ -47,8 +47,8 @@
 仓库提供打包脚本，构建并安装：
 
 ```bash
-bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.1.0_amd64.deb
-sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
+bash deb/build-deb.sh                 # 生成 com.github.dock-lyrics_1.1.1_amd64.deb
+sudo dpkg -i com.github.dock-lyrics_1.1.1_amd64.deb
 ```
 
 > 打包是**可复现**的：包内文件时间戳固定为 `SOURCE_DATE_EPOCH`（默认取 HEAD 提交时间），
@@ -234,6 +234,9 @@ Chromium 内核播放器偶尔会把页面标题当媒体标题上报，插件�
 
 ## 🆕 更新日志
 
+**v1.1.1**
+- **修复应用包图标校验**：补上缺失的桌面入口文件 `com.github.dock-lyrics.desktop`，并按 freedesktop 规范补齐 **7 种尺寸**（16/24/32/48/64/128/256）的 hicolor 图标——此前包内只有一张 PNG、没有 `.desktop`，导致商店「应用包内图标检测不通过：icon文件不存在」。
+
 **v1.1.0**
 - 歌词来源扩到 **五级**：新增**酷狗音乐**与 **QQ 音乐**在线曲库，LRCLIB 退居最后兜底。
 - 新增 **右键「显示位置」**：任务栏**左侧 / 右侧**一键切换并记忆。
@@ -248,7 +251,7 @@ Chromium 内核播放器偶尔会把页面标题当媒体标题上报，插件�
 
 - 代码：**GPL-3.0**（见 [LICENSE](LICENSE)）
 - 在线歌词来源：网易云音乐、酷狗音乐、QQ 音乐的开放搜索接口（仅个人学习测试）、**LRCLIB**（[lrclib.net](https://lrclib.net)，开放公共歌词库）
-- 项目图标：`docs/icon.png`（同时作为应用图标安装到 `/usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png`）
+- 项目图标：`docs/icon.png`（同时按 freedesktop 规范安装为 16/24/32/48/64/128/256 七种尺寸的 hicolor 应用图标，并配套 `/usr/share/applications/com.github.dock-lyrics.desktop` 桌面入口）
 - UI 基于 DTK / deepin 控件库
 
 > 本项目为 Deepin 开发者（插件）竞赛作品：**歌词小舟** —— 让歌词安静地泊在任务栏上。

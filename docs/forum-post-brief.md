@@ -14,9 +14,9 @@
 ## 🖼️ 效果预览
 
 *（发布时请上传本地图片，替换下面三行）*
-![整条任务栏效果：docs/screenshot-main.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-main.png)
-![任务栏歌词特写：docs/screenshot-closeup.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/screenshot-closeup.png)
-![运行效果：docs/dock-lyrics-preview.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.0/docs/dock-lyrics-preview.png)
+![整条任务栏效果：docs/screenshot-main.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/screenshot-main.png)
+![任务栏歌词特写：docs/screenshot-closeup.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/screenshot-closeup.png)
+![运行效果：docs/dock-lyrics-preview.png](https://raw.githubusercontent.com/Whisper-v/dock-lyrics/v1.1.1/docs/dock-lyrics-preview.png)
 
 ## ✨ 核心亮点
 
@@ -31,8 +31,8 @@
 ## 📦 安装（一条命令）
 
 ```bash
-# 下载本贴附件 com.github.dock-lyrics_1.1.0_amd64.zip，解压后：
-sudo dpkg -i com.github.dock-lyrics_1.1.0_amd64.deb
+# 下载本贴附件 com.github.dock-lyrics_1.1.1_amd64.zip，解压后：
+sudo dpkg -i com.github.dock-lyrics_1.1.1_amd64.deb
 # 如提示依赖缺失
 sudo apt -f install
 ```
@@ -67,15 +67,15 @@ sudo apt -f install
 - **双通道 seek 同步**：`Seeked` 信号与 `PropertiesChanged.Position` 两条路径都会立即重算歌词行，播放中/暂停都即时跳转；
 - 完整调试命令与 Bug 报告模板见仓库 `docs/debugging-guide.md`。
 
-## 🏗️ 开发历程（12 轮迭代）
+## 🏗️ 开发历程（13 轮迭代）
 
-脚手架 → 端到端 MPRIS 管线 → .deb 打包 + QQ 音乐实机适配 → seek 同步 → 切歌/重启兼容加固 → 调试指南 → 高亮主题 + 右键菜单 → 4 套深色主题 → 自定义字体/背景色 → 真实反馈"拖进度条不同步"实证修复（补 Position 通道）→ 开源 + v1.0.0 Release → v1.1 五级歌词源（补酷狗/QQ）+ 显示位置切换 + 暂停驻留 + 应用图标，打包 v1.1.0。
+脚手架 → 端到端 MPRIS 管线 → .deb 打包 + QQ 音乐实机适配 → seek 同步 → 切歌/重启兼容加固 → 调试指南 → 高亮主题 + 右键菜单 → 4 套深色主题 → 自定义字体/背景色 → 真实反馈"拖进度条不同步"实证修复（补 Position 通道）→ 开源 + v1.0.0 Release → v1.1 五级歌词源（补酷狗/QQ）+ 显示位置切换 + 暂停驻留 + 应用图标，打包 v1.1.0 → 投稿被商店「图标检测」拦下，补 `.desktop` + 七尺寸 hicolor 图标规范打包（v1.1.1）。
 
 ## 🔗 开源与下载
 
 - **GitHub**：https://github.com/Whisper-v/dock-lyrics （GPL-3.0，含完整源码/README/调试指南）
-- **v1.1.0 Release**：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.0
-- 附件：`com.github.dock-lyrics_1.1.0_amd64.zip`（内含 .deb，SHA-256 `47219b6c…936a54`）
+- **v1.1.1 Release**：https://github.com/Whisper-v/dock-lyrics/releases/tag/v1.1.1
+- 附件：`com.github.dock-lyrics_1.1.1_amd64.zip`（内含 .deb，SHA-256 `fffebb96…1e283a`）
 
 ## 🗓️ 未来计划
 

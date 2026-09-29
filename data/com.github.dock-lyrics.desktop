@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Lyrics Boat
+Name[zh_CN]=歌词小舟
+Name[zh_HK]=歌詞小舟
+Name[zh_TW]=歌詞小舟
+GenericName=Dock Lyrics
+GenericName[zh_CN]=任务栏歌词
+Comment=Show the current music lyric line on the dock while playing
+Comment[zh_CN]=播放音乐时在任务栏滚动显示当前歌词
+Icon=com.github.dock-lyrics
+Exec=/bin/false
+TryExec=/bin/false
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+Keywords=lyric;lyrics;music;dock;netease;qqmusic;kugou;歌词;音乐;任务栏;
+StartupNotify=false
+X-Deepin-Vendor=user-custom

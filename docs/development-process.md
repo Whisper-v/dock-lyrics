@@ -167,3 +167,25 @@ v1.0.0 开源之后，围绕"**歌词更找得到、位置更自由**"做了一�
 - **真实播放器**：QQ 音乐桌面版（Chromium MPRIS）在播《下雨了》→ `lyricsReady src= "netease" lines= 35`；
 - **显示位置**：用像素连通域定位歌词条胶囊（深色主题，胶囊底 `#CC142340`）——右侧模式下位于 `x=1177–1426`，切到左侧后移动到 `x=145–468`，两侧均与左侧插件/托盘区正常错开；验证后已把配置还原为原值；
 - **打包安装**：`dpkg -r dock-lyrics` 卸掉旧 Id 包 → 安装 `com.github.dock-lyrics_1.1.0_amd64.deb` → 重启 dde-shell，插件从新路径加载、图标注册到 hicolor 主题，无残留旧文件。
+
+## 13. v1.1.1 打包规范修复（商店图标校验）
+
+v1.1.0 打包上传投稿时，被商店自动校验拦下：**「应用包内图标检测不通过：icon文件不存在」**。复核包内结构发现，`data.tar` 里虽然有一张 `usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png`，但**没有 `/usr/share/applications/*.desktop`**。
+
+| # | 问题 | 结论 / 改动 |
+| --- | --- | --- |
+| 1 | 校验器如何找图标 | 它先读包内 `.desktop` 的 `Icon=` 字段，再据此到 `hicolor/<size>/apps/` 里找同名文件（**名字不带扩展名**）。没有 `.desktop` 就无从解析 → 报"icon文件不存在" |
+| 2 | 缺桌面入口 | 新增 `data/com.github.dock-lyrics.desktop`，`Icon=com.github.dock-lyrics`；`Exec`/`TryExec` 用 `/bin/false`——歌词小舟是**任务栏插件**，无常驻可执行程序，不能拿 `dde-shell` 当启动目标（会再起一个 shell），此写法与系统自带的 `org.deepin.dde-shell.desktop` 一致 |
+| 3 | 图标尺寸单一 | 由 `docs/icon.png`(500×500) 生成 **16/24/32/48/64/128/256** 七种尺寸入库 `data/icons/hicolor/`；此前是把 500×500 直接当 256×256 装，尺寸名不符 |
+| 4 | 名称一致性 | `desktop 文件名 == Icon 值 == 图标文件名(去扩展名) == deb 包名`，四者统一为 `com.github.dock-lyrics` |
+| 5 | 缓存刷新 | `postinst` 增加 `update-desktop-database` 与 `gtk-update-icon-cache`（均做存在性判断 + `|| true` 兜底） |
+| 6 | 版本 | 内容已发布的包不原地改，`1.1.0 → 1.1.1`（`control` / `CMakeLists.txt` / 输出包名 / 文档同步） |
+
+**验证（模拟校验器 + 系统层）**
+
+- 解包后按 `Icon=` 逐路径解析：命中 **7** 个尺寸文件，`RESULT: ✅ 通过`；
+- `desktop-file-validate` 无 error；`Gtk.IconTheme.lookup_icon()` 在 16→256 各尺寸均返回实际文件路径；
+- 安装后 `desktop-file-utils`、`hicolor-icon-theme` 触发器自动运行，`/usr/share/applications/com.github.dock-lyrics.desktop` 与 7 个图标就位；
+- 重启 `dde-shell` 后插件照常加载并取词成功（实测 `lyricsReady src="netease" lines=46`）。
+
+> 教训：**插件类包也得按"应用"规范打包**——`.desktop` + 多尺寸 hicolor 图标是商店校验的硬门槛，`dpkg -c` 自查时务必确认这两项都在。

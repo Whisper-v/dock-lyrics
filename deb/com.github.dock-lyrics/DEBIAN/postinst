@@ -1,5 +1,12 @@
 #!/bin/sh
 set -e
+# refresh desktop / icon caches so DDE picks up the new entry immediately
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
 # restart dde-shell so the new dock plugin is picked up
 if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active dde-shell@DDE.service >/dev/null 2>&1; then
     systemctl --user restart dde-shell@DDE.service >/dev/null 2>&1 || true

@@ -10,14 +10,14 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PKG="$ROOT/deb/com.github.dock-lyrics"
 BUILD="$ROOT/build"
-OUT="$ROOT/com.github.dock-lyrics_1.1.0_amd64.deb"
+APPID="com.github.dock-lyrics"
+VERSION="1.1.1"
+OUT="$ROOT/${APPID}_${VERSION}_amd64.deb"
 
 # sanity: require a fresh build
-[ -f "$BUILD/plugins/com.github.dock-lyrics.so" ] || { echo "build first: cmake --build build"; exit 1; }
+[ -f "$BUILD/plugins/${APPID}.so" ] || { echo "build first: cmake --build build"; exit 1; }
 
 # --- reproducible packaging timestamp -------------------------------------
-# dpkg-deb honours SOURCE_DATE_EPOCH. Default to the HEAD commit time so that
-# the same source always produces the same bytes.
 if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
     SOURCE_DATE_EPOCH="$(git -C "$ROOT" log -1 --format=%ct 2>/dev/null || true)"
 fi
@@ -27,14 +27,25 @@ echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH ($(date -d "@$SOURCE_DATE_EPOCH" '+%F
 
 rm -rf "$PKG/usr"
 mkdir -p "$PKG/usr/lib/x86_64-linux-gnu/dde-shell" \
-         "$PKG/usr/share/dde-shell/com.github.dock-lyrics" \
-         "$PKG/usr/share/icons/hicolor/256x256/apps"
+         "$PKG/usr/share/dde-shell/${APPID}" \
+         "$PKG/usr/share/applications" \
+         "$PKG/usr/share/icons/hicolor"
 
-cp -f  "$BUILD/plugins/com.github.dock-lyrics.so" "$PKG/usr/lib/x86_64-linux-gnu/dde-shell/"
-cp -rf "$BUILD/packages/com.github.dock-lyrics/." "$PKG/usr/share/dde-shell/com.github.dock-lyrics/"
-# package icon (also used as the project logo in docs/icon.png)
-install -m 644 "$ROOT/docs/icon.png" "$PKG/usr/share/icons/hicolor/256x256/apps/com.github.dock-lyrics.png"
-
+# 1) the plugin shared object
+cp -f  "$BUILD/plugins/${APPID}.so" "$PKG/usr/lib/x86_64-linux-gnu/dde-shell/"
+# 2) QML package (main.qml + metadata.json)
+cp -rf "$BUILD/packages/${APPID}/." "$PKG/usr/share/dde-shell/${APPID}/"
+# 3) desktop entry — REQUIRED by store/package validators so that the
+#    Icon= key can be resolved to a real file inside the package.
+install -m 644 "$ROOT/data/${APPID}.desktop" "$PKG/usr/share/applications/"
+# 4) icon set in the freedesktop hicolor theme, one file per size.
+#    The file name must equal the desktop Icon= value (no extension).
+for s in 16 24 32 48 64 128 256; do
+    d="$PKG/usr/share/icons/hicolor/${s}x${s}/apps"
+    mkdir -p "$d"
+    install -m 644 "$ROOT/data/icons/hicolor/${s}x${s}/apps/${APPID}.png" \
+                   "$d/${APPID}.png"
+done
 # pin mtimes so the tarball metadata is stable as well
 find "$PKG" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 
